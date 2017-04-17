@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>jQuery UI Autocomplete - Categories</title>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
+    <link rel="stylesheet" href="style.css"/>
+    <style type="text/css">
+      .ui-autocomplete-category {
+        font-weight: bold;
+        padding: .2em .4em;
+        margin: .8em 0 .2em;
+        line-height: 1.5;
+        }
+      #results h2 { color: #25649f; margin-bottom: 0; }
+      .id, .type { font-size: small; }
+      #results > div:nth-child(2n+1) { background-color: #efe; }
+      /* #results > div p:nth-child(2) { margin-top: 0; font-size: smaller; } */
+      .applicability { margin-top: 0; font-size: smaller; }
+      p.resources, p.related { margin-bottom: 0; }
+      ul.resources, ul.related { margin-top: 0; }
+    </style>
+    <script src="https://code.jquery.com/jquery-1.12.4.js" type="text/javascript"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js" type="text/javascript"></script>
+    <!-- <script src="jquery/jquery-1.12.4.js" type="text/javascript"></script> -->
+    <!-- <script src="jquery/jquery-ui.js" type="text/javascript"></script> -->
+    <script src="local.js" type="text/javascript"></script>
+  </head>
+  <body>
+    <!-- G10,108 35 44 64 65 88 91 A4,5,14,16 F16,30,32 SL6,18,20,26,30,32 PDF10,12,1,20,42,59,68,79,86,89 -->
+    <!-- FLASH16,30 -->
+    <form id="searchForm">
+      <fieldset style="float:left;">
+        <legend>search box</legend>
+        <label for="search">Search: </label>
+        <input id="search"/>
+      </fieldset>
+    </form>
+    <form id="controls">
+      <fieldset style="float:left;">
+        <legend>search in:</legend>
+        <input type="checkbox" id="techniques" name="searchIn" checked="checked" />
+        <label for="techniques">techniques</label>
+        <input type="checkbox" id="tutorials" name="searchIn" />
+        <label for="tutorials">tutorials</label>
+        <input type="checkbox" id="perspectives" name="searchIn" />
+        <label for="perspectives">perspectives</label>
+      </fieldset>
+      <fieldset style="float:left;">
+        <legend>auto-complete terms from:</legend>
+        <input type="radio" id="context" name="autoCompleteSource" checked="checked" />
+        <label for="context">context categories</label>
+        <input type="radio" id="purpose" name="autoCompleteSource" />
+        <label for="purpose">purpose categories</label>
+        <input type="radio" id="meet" name="autoCompleteSource" />
+        <label for="sophomore">meet</label>
+      </fieldset>
+      <!-- fieldset style="float:left;">
+        <legend>style</legend>
+        <input type="radio" id="category" name="style" checked="checked" />
+        <label for="category">category list</label>
+        <input type="radio" id="flat" name="style"/>
+        <label for="flat">flat list</label>
+      </fieldset -->
+    </form>
+    <div id="results" style="clear:both;"></div>
+  </body>
+</html>
