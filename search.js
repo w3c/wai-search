@@ -40,7 +40,8 @@ $( function() {
       }
       return true;
   });
-  $("#controls").on("change", renderResults);
+  $("#controls").on("change", hideAndRender);
+  $("#source-button").on("click", toggleControls);
 } );
 
 var NowPlaying = null; // what type of search box we're using
@@ -220,6 +221,29 @@ function renderResults (evt) {
     return ret;
   }
 
+}
+
+function hideAndRender (evt) {
+  $("#controls").css("display", "none");
+  return renderResults(evt);
+}
+
+function toggleControls (evt) {
+  debugger;
+  var hiding = $("#controls").css("display") === "flex";
+  $("#controls").css("display", hiding ? "none" : "flex");
+  if (!hiding) {
+    var target = evt.target;
+    while (target.tagName !== "BUTTON")
+      target = target.parentElement;
+    var bottonBBox = target.getBoundingClientRect();
+    var controlsBBox = document.getElementById("controls").getBoundingClientRect();
+    console.dir(bottonBBox);
+    console.dir(controlsBBox);
+    var left = bottonBBox.right - controlsBBox.width;
+    $("#controls").css("top", bottonBBox.bottom).css("left", left);
+  }
+  return false;
 }
 
 function techniqueLabel (t) {

@@ -7,19 +7,6 @@
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"/>
     <link rel="stylesheet" href="style.css"/>
     <style type="text/css">
-      .ui-autocomplete-category {
-        font-weight: bold;
-        padding: .2em .4em;
-        margin: .8em 0 .2em;
-        line-height: 1.5;
-        }
-      #results h2 { color: #25649f; margin-bottom: 0; }
-      .id, .type { font-size: small; }
-      #results > div:nth-child(2n+1) { background-color: #efe; }
-      /* #results > div p:nth-child(2) { margin-top: 0; font-size: smaller; } */
-      .applicability { margin-top: 0; font-size: smaller; }
-      p.resources, p.related { margin-bottom: 0; }
-      ul.resources, ul.related { margin-top: 0; }
     </style>
     <script src="https://code.jquery.com/jquery-1.12.4.js" type="text/javascript"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js" type="text/javascript"></script>
@@ -32,23 +19,33 @@
   <body>
     <!-- G10,108 35 44 64 65 88 91 A4,5,14,16 F16,30,32 SL6,18,20,26,30,32 PDF10,12,1,20,42,59,68,79,86,89 -->
     <!-- FLASH16,30 -->
+    <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" display="none">
+      <symbol id="down-arrow" viewBox="0 -10 107 63" >
+        <path d="M 54,40 90,3 C 99,-5 112,8 104,16 L 60,60 c 0,0 -8,6 -14,0 L 3,16 C -5,8 8,-4 15,2 Z" />
+      </symbol>
+    </svg>
     <form id="searchForm">
-      <fieldset style="float:left;">
+      <fieldset>
         <legend>search box</legend>
         <label for="search">Search: </label>
         <input id="search"/>
+        <button id="source-button" title="select sources">
+          <svg><use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#down-arrow" /></svg>
+        </button>
       </fieldset>
-    </form>
-    <form id="controls">
-      <fieldset style="float:left;">
-        <legend>search in:</legend>
-        <input type="checkbox" id="techniques" name="searchIn" checked="checked" />
-        <label for="techniques">techniques</label>
-        <input type="checkbox" id="tutorials" name="searchIn" />
-        <label for="tutorials">tutorials</label>
-        <input type="checkbox" id="perspectives" name="searchIn" />
-        <label for="perspectives">perspectives</label>
-      </fieldset>
+      <div id="controls">
+        <div>
+        <fieldset>
+          <legend>search in:</legend>
+          <input type="checkbox" id="techniques" name="searchIn" checked="checked" />
+          <label for="techniques">techniques</label><br/>
+          <input type="checkbox" id="tutorials" name="searchIn" />
+          <label for="tutorials">tutorials</label><br/>
+          <input type="checkbox" id="perspectives" name="searchIn" />
+          <label for="perspectives">perspectives</label>
+        </fieldset>
+        </div>
+      </div>
       <!-- fieldset style="float:left;">
         <legend>auto-complete terms from:</legend>
         <input type="radio" id="context" name="autoCompleteSource" checked="checked" />

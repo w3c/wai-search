@@ -1,0 +1,56 @@
+body {
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+table {
+	font-size: 1em;
+}
+
+.ui-draggable, .ui-droppable {
+	background-position: top;
+}
+
+.ui-autocomplete-category {
+    font-weight: bold;
+    padding: .2em .4em;
+    margin: .8em 0 .2em;
+    line-height: 1.5;
+}
+#results h2 { color: #25649f; margin-bottom: 0; }
+.id, .type { font-size: small; }
+#results > div:nth-child(2n+1) { background-color: #efe; }
+/* #results > div p:nth-child(2) { margin-top: 0; font-size: smaller; } */
+.applicability { margin-top: 0; font-size: smaller; }
+p.resources, p.related { margin-bottom: 0; }
+ul.resources, ul.related { margin-top: 0; }
+
+#searchForm > fieldset {
+    box-shadow: -.3ex .3ex grey;
+    display: inline;
+}
+
+#search {
+    background: url(https://d30y9cdsu7xlg0.cloudfront.net/png/16508-200.png); 
+    background-repeat: no-repeat;
+    background-size: 2ex 2ex;
+    background-position: right .5ex bottom .2ex;;
+}
+#controls {
+    position: absolute;
+    left: 0;
+    top: 0;
+    list-style: none;
+    margin: 0;
+    display: none;
+    background: white; opacity: 1;
+    border: thin solid buttontext;
+    box-shadow: -.3ex .3ex grey;
+}
+#controls div {
+    border: 10px solid buttonface;
+}
+#controls fieldset {
+    margin: 1ex;
+}
+#source-button svg { width: 1em; height: 1.5ex; }
+
