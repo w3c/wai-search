@@ -16,9 +16,9 @@ function getInterface () {
   })
 
   return {
-    resourceText: _resourceText,
     log: _log,
     get: function (url, f) {
+      var _this = this;
       _queue.add(url);
       return require("jsdom").env(
         url,
@@ -29,7 +29,7 @@ function getInterface () {
             a.href = rel;
             return a.href;
           }
-          f(err, window.$, getAbs, url, _resourceText);
+          f(_this, window.$, getAbs, url, _resourceText);
           _queue.finished(url);
         });
     }
