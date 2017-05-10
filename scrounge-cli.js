@@ -29,7 +29,7 @@ function getInterface () {
             a.href = rel;
             return a.href;
           }
-          f(err, window.$, getAbs, _resourceText);
+          f(err, window.$, getAbs, url, _resourceText);
           _queue.finished(url);
         });
     }
