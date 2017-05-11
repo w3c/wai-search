@@ -7,7 +7,9 @@
     <!-- <script type = "text/javascript" language = "javascript"> -->
     <!-- </script> -->
     <style type="text/css">
-      #log { background-color: #cc0; }
+      .idle { background-color: #bbb; }
+      .doing { background-color: #cc0; }
+      .done { background-color: #be0; }
       .index { background-color: #ddd; display: none; }
       .count { color: red; }
       .key { font-weight: bold; }
@@ -15,7 +17,7 @@
   </head>
   <body>
       <input type="button" id="indexButton" value="Index" />
-      <div id="log"></div>
+      <div id="log" class="idle"></div>
       <pre id="results"></pre>
   </body>
 </html>

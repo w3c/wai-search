@@ -1,6 +1,6 @@
 (function () {
-  var Site = "http://localhost/";
-  // var Site = "https://www.w3.org/";
+  var Site = "https://www.w3.org/";
+  // var Site = "http://localhost/";
 
   function startCrawl (iface) {
     [

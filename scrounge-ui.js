@@ -1,11 +1,15 @@
 (function () {
-  // How much to throttle repeated GETs
-  const DELAY = 0; // 3000;
-  // classed in UI
+
+  // How much to throttle repeated GETs to avoid getting blacklisted on w3.org:
+  const DELAY = 10000; // Set to 0 when running on localhost.
+
+  // Some display classes which can be set in the .html style:
   const COUNT = "count";
   const INDEX = "index";
   const KEY = "key";
   const VALUE = "value";
+  const DONE = "done";
+  const DOING = "doing";
 
   $(document).ready(() => {
     $("#indexButton").click(() => {
@@ -63,6 +67,7 @@
     };
     var _queue = Scrounger.makeQueue(() => {
       $("#results").append(JSON.stringify(rootIndex, null, 2)+"\n");
+      $("#log").attr("class", DONE);
     });
     var _get = function (url, f) {
       var _this = this;
@@ -94,6 +99,7 @@
       });
       }, DELAY*Math.random()); // cheasy throttling
     }
+    $("#log").attr("class", DOING);
     return {
       log: makeLogger($("#log"), makeIndex()),
       get: _get
