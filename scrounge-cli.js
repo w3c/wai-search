@@ -3,16 +3,26 @@
 (function(iface) {
 
   var scrounge = require('./scroungelib');
-  scrounge.index(iface)
+  scrounge.startCrawl(iface)
 })(getInterface());
 
 function getInterface () {
   var jqURL = "http://localhost/2017/04/wai-search/jquery/jquery-1.12.4.js"
   // var jqURL = "http://code.jquery.com/jquery.js";
-  var _resourceText = {  };
+  var _resourceText = (function () {
+      var vals = {  };
+      return {
+        set: function (key, value) {
+          vals[key] = value;
+        },
+        get: function () {
+          return vals;
+        }
+      };
+    })();
   var _log = console.log;
   var _queue = require('./scroungelib').makeQueue(() => {
-    _log(JSON.stringify(_resourceText));
+    _log(JSON.stringify(_resourceText.get()));
   })
 
   return {
