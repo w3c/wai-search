@@ -1,7 +1,9 @@
 (function () {
 
   // How much to throttle repeated GETs to avoid getting blacklisted on w3.org:
-  const DELAY = 10000; // Set to 0 when running on localhost.
+  const DELAY = 500; // Set to 0 when running on localhost.
+  var NextGet = Date.now()+DELAY;
+  var Start = Date.now();
 
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
@@ -10,6 +12,7 @@
   const VALUE = "value";
   const DONE = "done";
   const DOING = "doing";
+  const RENDERED_RESULT = "block";
 
   $(document).ready(() => {
     $("#indexButton").click(() => {
@@ -32,9 +35,13 @@
     }
     function makeLogger (target, index) {
       var _results = $("<div class=\""+INDEX+"\"/>");
-      var _count = $("<button class=\""+COUNT+"\">0</button>").on("click", function (evt) {
-        _results.css("display", _results.css("display") === "table" ? "none" : "table");
-      });
+      var _count = $("<button class=\""+COUNT+"\">0</button>").
+          on("click", function (evt) {
+            var newDisplay = _results.css("display") === RENDERED_RESULT ?
+                "none" :
+                RENDERED_RESULT;
+            _results.css("display", newDisplay);
+          });
       target.append(" ").
         append(_count).
         append(_results);
@@ -67,12 +74,23 @@
     };
     var _queue = Scrounger.makeQueue(() => {
       $("#results").append(JSON.stringify(rootIndex, null, 2)+"\n");
-      $("#log").attr("class", DONE);
+      $("#indexButton").attr("class", DONE).prop("value", "Indexed");
     });
     var _get = function (url, f) {
       var _this = this;
       _queue.add(url);
       var elt = $("<div/>");
+      var was = NextGet;
+      NextGet = was+DELAY;
+
+        var nestedIndex = makeIndex();
+        var logElt = _this.log(url);
+        logElt.attr("class", "idle");
+        var nestedInterface = {
+          log: makeLogger(logElt, nestedIndex),
+          logElt: logElt,
+          get: _get
+        };
       setTimeout(() => {
       elt.load(url, function (data, status, jqXhr) {
         // would like to return a simple HTML object.
@@ -89,19 +107,21 @@
           a.href = rel;
           return a.href;
         }
-        var nestedIndex = makeIndex();
-        var nestedInterface = {
-          log: makeLogger(_this.log(url), nestedIndex),
-          get: _get
-        };
+        logElt.attr("class", "doing");
         f(nestedInterface, find, absolutize, url, nestedIndex);
-        _queue.finished(url);
+        setTimeout(() => {
+          logElt.attr("class", "done");
+          _queue.finished(url);
+        }, 0); // demo [class=doing]
       });
-      }, DELAY*Math.random()); // cheasy throttling
+      }, Math.abs(NextGet - Date.now())); // cheasy throttling
     }
-    $("#log").attr("class", DOING);
+    $("#indexButton").attr("class", DOING).prop("value", "Indexing");
+    var logElt = $("#log");
+    logElt.attr("class", "doing");
     return {
-      log: makeLogger($("#log"), makeIndex()),
+      log: makeLogger(logElt, makeIndex()),
+      logElt: logElt,
       get: _get
     };
   }

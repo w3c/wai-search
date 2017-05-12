@@ -42,7 +42,6 @@
     videoPages.each((idx, li) => {
       var relativeName = jQuery(li).find("a").attr("href");
       var pageURL = getAbs(relativeName);
-      iface.log(pageURL);
       iface.get(
         pageURL,
         function (iface, jQuery, getAbs, url, index) {
