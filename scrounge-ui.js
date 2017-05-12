@@ -79,7 +79,6 @@
     var _get = function (url, f) {
       var _this = this;
       _queue.add(url);
-      var elt = $("<div/>");
       var was = NextGet;
       NextGet = was+DELAY;
 
@@ -92,6 +91,7 @@
           get: _get
         };
       setTimeout(() => {
+      var elt = $("<div/>");
       elt.load(url, function (data, status, jqXhr) {
         // would like to return a simple HTML object.
         function find () {
@@ -114,7 +114,7 @@
           _queue.finished(url);
         }, 0); // demo [class=doing]
       });
-      }, Math.abs(NextGet - Date.now())); // cheasy throttling
+      }, Math.abs(NextGet - Date.now())); // Wait for next slot to send request.
     }
     $("#indexButton").attr("class", DOING).prop("value", "Indexing");
     var logElt = $("#log");
