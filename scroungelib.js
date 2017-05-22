@@ -45,7 +45,9 @@
       iface.get(
         pageURL,
         function (iface, jQuery, getAbs, url, index) {
-          var subPages = jQuery("ul[aria-labelledby=list-heading-tutorials] li");
+          var subPages = jQuery("ul[aria-labelledby=list-heading-tutorials] li")
+          //              .filter((_, elt) => { return $(elt).find("a").length > 0; })
+          ;
           iface.log(subPages.length, "sub-pages"); // , subPages.find("a").attr("href").get().join(",")
           subPages.each((idx, li) => {
             var tutorialName = jQuery(li).find("a").attr("href");

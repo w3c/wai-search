@@ -56,6 +56,15 @@
           append("\n");
         _count.text(parseInt(_count.text())+1);
       };
+      index.fail = function (type, msg) {
+        _results.
+          append($("<span class=\""+KEY+"\">"+type+":</span>")).
+          append(" ").
+          append($("<span class=\""+VALUE+"\">"+msg+"</span>")).
+          append($("<br/>")).
+          append("\n");
+        _count.text(parseInt(_count.text())+1);
+      };
       index.target = target;
       var _ul = null;
       return function () {
@@ -81,6 +90,7 @@
       _queue.add(url);
       var was = NextGet;
       NextGet = was+DELAY;
+      var delay = 0; // Math.abs(NextGet - Date.now());
 
         var nestedIndex = makeIndex();
         var logElt = _this.log(url);
@@ -90,9 +100,38 @@
           logElt: logElt,
           get: _get
         };
-      setTimeout(() => {
-      var elt = $("<div/>");
-      elt.load(url, function (data, status, jqXhr) {
+
+      if (Loader === "elt.load") {
+        setTimeout(() => {
+        var elt = $("<div/>");
+        elt.load(url, function (data, status, jqXhr) {
+          invokeCallback(elt);
+        });
+        }, delay); // Wait for next slot to send request.
+      } else  if (Loader === "ajax") {
+        $.ajax({
+          method: 'get',
+          url: url,
+          dataType: 'text',
+          delay: 0 // Wait for next slot to send request.
+        }).then(function (data, status, jqXhr) {
+          var elt = $("<div>" + data.
+                      // replace(/[\S\s]*?<body/, '<div').
+                      // replace(/<\/body>[\S\s]*$/, '</div>').
+                      replace(/src=/g, "src999=") // don't GET images.
+                      + "</div>"
+                     );
+          invokeCallback(elt);
+        }).fail(function (jqXHR, textStatus, errorThrown) {
+          logElt.attr("class", "fail");
+          nestedIndex.fail(textStatus, errorThrown);
+          _queue.finished(url);
+        });
+      } else {
+        throw "unrecognized loader: " + Loader;
+      }
+
+      function invokeCallback (elt) {
         // would like to return a simple HTML object.
         function find () {
           return elt.find.apply(elt, [].slice.call(arguments));
@@ -113,8 +152,7 @@
           logElt.attr("class", "done");
           _queue.finished(url);
         }, 0); // demo [class=doing]
-      });
-      }, Math.abs(NextGet - Date.now())); // Wait for next slot to send request.
+      }
     }
     $("#indexButton").attr("class", DOING).prop("value", "Indexing");
     var logElt = $("#log");
