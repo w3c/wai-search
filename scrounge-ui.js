@@ -1,9 +1,11 @@
 (function () {
 
+  var Loader = "ajax"; // ajax | elt.load
+
   // How much to throttle repeated GETs to avoid getting blacklisted on w3.org:
-  const DELAY = 500; // Set to 0 when running on localhost.
-  var NextGet = Date.now()+DELAY;
-  var Start = Date.now();
+  const DELAY = 250; // Set to 0 when running on localhost.
+  var LastGet = 0;
+  var Start = Date.now(); // for differential logging
 
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
@@ -88,9 +90,6 @@
     var _get = function (url, f) {
       var _this = this;
       _queue.add(url);
-      var was = NextGet;
-      NextGet = was+DELAY;
-      var delay = 0; // Math.abs(NextGet - Date.now());
 
         var nestedIndex = makeIndex();
         var logElt = _this.log(url);
@@ -101,35 +100,38 @@
           get: _get
         };
 
-      if (Loader === "elt.load") {
-        setTimeout(() => {
-        var elt = $("<div/>");
-        elt.load(url, function (data, status, jqXhr) {
-          invokeCallback(elt);
-        });
-        }, delay); // Wait for next slot to send request.
-      } else  if (Loader === "ajax") {
-        $.ajax({
-          method: 'get',
-          url: url,
-          dataType: 'text',
-          delay: 0 // Wait for next slot to send request.
-        }).then(function (data, status, jqXhr) {
-          var elt = $("<div>" + data.
-                      // replace(/[\S\s]*?<body/, '<div').
-                      // replace(/<\/body>[\S\s]*$/, '</div>').
-                      replace(/src=/g, "src999=") // don't GET images.
-                      + "</div>"
-                     );
-          invokeCallback(elt);
-        }).fail(function (jqXHR, textStatus, errorThrown) {
-          logElt.attr("class", "fail");
-          nestedIndex.fail(textStatus, errorThrown);
-          _queue.finished(url);
-        });
-      } else {
-        throw "unrecognized loader: " + Loader;
-      }
+      var now = Date.now();
+      var nextGet = Math.max(Math.round(LastGet + DELAY), now);
+      var delay = nextGet - now;
+      LastGet = nextGet;
+      setTimeout(() => {
+        if (Loader === "elt.load") {
+          var elt = $("<div/>");
+          elt.load(url, function (data, status, jqXhr) {
+            invokeCallback(elt);
+          });
+        } else  if (Loader === "ajax") {
+          $.ajax({
+            method: 'get',
+            url: url,
+            dataType: 'text'
+          }).then(function (data, status, jqXhr) {
+            var elt = $("<div>" + data.
+                        // replace(/[\S\s]*?<body/, '<div').
+                        // replace(/<\/body>[\S\s]*$/, '</div>').
+                        replace(/src=/g, "src999=") // don't GET images.
+                        + "</div>"
+                       );
+            invokeCallback(elt);
+          }).fail(function (jqXHR, textStatus, errorThrown) {
+            logElt.attr("class", "fail");
+            nestedIndex.fail(textStatus, errorThrown);
+            _queue.finished(url);
+          });
+        } else {
+          throw "unrecognized loader: " + Loader;
+        }
+      }, delay); // Wait for next slot to send request.
 
       function invokeCallback (elt) {
         // would like to return a simple HTML object.
