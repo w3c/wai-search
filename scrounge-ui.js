@@ -49,11 +49,23 @@
         append(_results);
       _oldSet = index.set;
       index.set = function (key, value) {
+        value = Object.keys(value).reduce((ret, k) => {
+          var val = value[k];
+          if (typeof val === "string")
+            val = val.split(/\s+/);
+          ret[k] = val.map(txt => {
+            return txt.replace(/\s+/g, " ").replace(/</g, "&lt;");
+          });
+          return ret;
+        }, {});
         _oldSet.call(index, key, value);
+        var valsHTML = Object.keys(value).map(k => {
+          return `<span class="key">${k}:</span> <span class="value">${value[k].join(" ")}</span>`;
+        });
         _results.
-          append($("<span class=\""+KEY+"\">"+key+":</span>")).
+          append($("<li><span class=\""+KEY+"\">"+key+":</span></li>")).
           append(" ").
-          append($("<span class=\""+VALUE+"\">"+value+"</span>")).
+          append($("<pre>" + valsHTML.join("\n") + "</pre>")).
           append($("<br/>")).
           append("\n");
         _count.text(parseInt(_count.text())+1);
@@ -92,7 +104,7 @@
       _queue.add(url);
 
         var nestedIndex = makeIndex();
-        var logElt = _this.log(url);
+      var logElt = _this.log(`<a href="${url}">${url}</a>`);
         logElt.attr("class", "idle");
         var nestedInterface = {
           log: makeLogger(logElt, nestedIndex),
