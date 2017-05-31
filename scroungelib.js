@@ -1,13 +1,15 @@
 (function () {
-  var Site = "https://www.w3.org/";
-  // var Site = "http://localhost/";
+  // var Site = "https://www.w3.org/";
+  // var Site = "http://90.9.146.48/";
+  var Site = "http://localhost/";
 
   function startCrawl (iface) {
     [
       { path: "WAI/perspectives/", func: parsePerspectives },
       { path: "WAI/tutorials/", func: parseTutorials },
       { path: "WAI/bcase/", func: parseBCase },
-      { path: "WAI/eval/preliminary", func: parseDirected },
+      { path: "WAI/eval/preliminary.php", func: parseDirected },
+      // { path: "WAI/eval/p2.php", func: parseDirected },
     ].forEach(g => {
       var url = Site+g.path;
       iface.get(url, g.func);
@@ -99,21 +101,73 @@
       );
     });
   }
-  function parseDirected (iface, jQuery, getAbs, url, index) {debugger;
-    var sections = jQuery(".search-region");
-    sections.each((idx, section) => {
-      section = jQuery(section);
-      var h = section.find("[id]").slice(0, 1);
-      var fragment = h.attr("id");
-      var closest = url + "#" + fragment;
-      var theRest = section.find("*").not(h);
-      index.set(closest, {
-        0: [h.text()],
-        1: theRest.map((i, e) => {
+  function parseDirected (iface, jQuery, getAbs, url, index) {
+    // var statusButton = $("<button/>").text("conf").addClass("count");
+    // var statusText = $("<div/>").text("").addClass(".index");
+    // iface.logElt.find(".index").before(status);
+    if (jQuery("#searchRules").length !== 1) {
+      iface.log("<span class=\"error\">expected exaclty one &lt;script id=\"searchRules\">&lt;/script></span>")
+      return;
+    }
+    var configRoot;
+    try {
+      configRoot = JSON.parse(jQuery("#searchRules").text());
+    } catch (e) {
+      iface.log("<span class=\"error\">"+e.toString().replace(/</g, "&lt;")+"</span><pre>"+jQuery("#searchRules").text()+"</pre>")
+      return;
+    }
+    parseDirectives({
+      find: function () {
+        return jQuery.apply(jQuery, [].slice.call(arguments));
+      }
+    }, configRoot, url, ["all"]);
+    // var sections = jQuery(".search-region");
+    // sections.each((idx, section) => {
+    //   section = jQuery(section);
+    //   var h = section.find("[id]").slice(0, 1);
+    //   var fragment = h.attr("id");
+    //   var closest = url + "#" + fragment;
+    //   var theRest = section.find("*").not(h);
+    //   index.set(closest, {
+    //     0: [h.text()],
+    //     1: theRest.map((i, e) => {
+    //       return jQuery(e).text();
+    //     }).get()
+    //   });
+    // });
+    function parseDirectives (elts, config, href, flavors) {
+      if ("flavors" in config)
+        flavors = config.flavors;
+      if ("region" in config) {
+        if (!("select" in config.region))
+          return iface.log("expected select in "+JSON.stringify(config.region));
+        if (!("next-anchor" in config.region))
+          return iface.log("expected next-anchor in "+JSON.stringify(config.region));
+        var sections = elts.find(config.region.select);
+        sections.each((_, section) => {
+          var closest = url + "#" + $(section).
+              find(config.region["next-anchor"]).slice(0, 1).attr("id");
+          parseDirectives($(section), config.region, closest, flavors);
+        });
+        return;
+      }
+      var indexMe = {};
+      var found = config.find.reduce((acc, find) =>  {
+        innerElts = elts.find(find.select);
+        var addMe = {};
+        addMe[find.quality] = [innerElts.text()];
+        index.set(href, addMe);
+        return acc.add(innerElts);
+      }, $("create empty selection"));
+      found.remove();
+      if ("rest" in config) {
+        var addMe = {};
+        addMe[config.rest.quality] = elts.children().map((i, e) => {
           return jQuery(e).text();
-        }).get()
-      });
-    });
+        }).get();
+        index.set(href, addMe);
+      }
+    }
   }
 
   function makeQueue (done) {
