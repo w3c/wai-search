@@ -27,8 +27,20 @@
       var vals = {  };
       return {
         set: function (key, value) {
-          vals[key] = value;
-          rootIndex[key] = value;
+          merge(vals, key, value);
+          merge(rootIndex, key, value);
+          function merge (index, key, values, flavors) {
+            if (key in index) {
+              Object.keys(value).forEach(k => {
+                if (k in index[key])
+                  index[key][k] = index[key][k].concat(values[k]);
+                else
+                  index[key][k] = values[k];
+              });
+            } else {
+              index[key] = value;
+            }
+          }
         },
         get: function () {
           return vals;
