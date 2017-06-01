@@ -122,7 +122,7 @@
       find: function () {
         return jQuery.apply(jQuery, [].slice.call(arguments));
       }
-    }, configRoot, url, ["all"]);
+    }, configRoot, url, ["all"], index);
     // var sections = jQuery(".search-region");
     // sections.each((idx, section) => {
     //   section = jQuery(section);
@@ -137,27 +137,48 @@
     //     }).get()
     //   });
     // });
-    function parseDirectives (elts, config, href, flavors) {
+    function parseDirectives (elts, config, href, flavors, index) {
       if ("flavors" in config)
         flavors = config.flavors;
       if ("region" in config) {
         if (!("select" in config.region))
           return iface.log("expected select in "+JSON.stringify(config.region));
-        if (!("next-anchor" in config.region))
-          return index.fail("expected next-anchor in ", JSON.stringify(config.region, null, 2));
         var sections = elts.find(config.region.select);
-        sections.each((_, section) => {
-          var closest = url + "#" + $(section).
-              find(config.region["next-anchor"]).slice(0, 1).attr("id");
-          parseDirectives($(section), config.region, closest, flavors);
-        });
+        if ("next-anchor" in config.region) {
+          sections.each((_, section) => {
+            var closest = url + "#" + $(section).
+                find(config.region["next-anchor"]).slice(0, 1).attr("id");
+            parseDirectives($(section), config.region, closest, flavors, index);
+          });
+        } else if ("follow" in config.region) {
+          sections.each((_, section) => {debugger;
+            $(section).find(config.region.follow).each((idx, a) => {
+              var href = getAbs($(a).attr("href"));
+              iface.get(
+                href,
+                function (iface, jQuery, getAbs, url, index) {
+                  parseDirectives({
+                    find: function () {
+                      return jQuery.apply(jQuery, [].slice.call(arguments));
+                    }
+                  }, config.region, url, flavors, index);
+                });
+            });
+          });
+        } else {
+          return index.fail("expected next-anchor or follow in", JSON.stringify(config.region, null, 2));
+        }
         return;
       }
       var indexMe = {};
       var found = config.find.reduce((acc, find) =>  {
         innerElts = elts.find(find.select);
         var addMe = {};
-        addMe[find.quality] = [innerElts.text()];
+        if ("attribute" in find) {
+          addMe[find.quality] = innerElts.attr(find.attribute);
+        } else {
+          addMe[find.quality] = [innerElts.text()];
+        }
         index.set(href, addMe);
         return acc.add(innerElts);
       }, $("create empty selection"));
