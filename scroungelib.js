@@ -6,6 +6,7 @@
   function startCrawl (iface) {
     [
       { path: "WAI/perspectives/", func: parsePerspectives },
+      { path: "WAI/perspectives/", func: parseDirected },
       { path: "WAI/tutorials/", func: parseTutorials },
       { path: "WAI/bcase/", func: parseBCase },
       { path: "WAI/eval/preliminary.php", func: parseDirected },
@@ -102,11 +103,12 @@
     });
   }
   function parseDirected (iface, jQuery, getAbs, url, index) {
-    // var statusButton = $("<button/>").text("conf").addClass("count");
-    // var statusText = $("<div/>").text("").addClass(".index");
-    // iface.logElt.find(".index").before(status);
+    // notes on how to extend interface
+    var statusButton = $("<button/>").text("conf");
+    var statusText = $("<div/>").text("sss");
+    iface.logElt.find(".index").before(status);
     if (jQuery("#searchRules").length !== 1) {
-      iface.error("expected exaclty one <script id=\"searchRules\"></script>")
+      iface.error("expected exaclty one <script id=\"searchRules\"></script>");
       return;
     }
     var configRoot;
