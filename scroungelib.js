@@ -106,7 +106,7 @@
     // var statusText = $("<div/>").text("").addClass(".index");
     // iface.logElt.find(".index").before(status);
     if (jQuery("#searchRules").length !== 1) {
-      iface.log("<span class=\"error\">expected exaclty one &lt;script id=\"searchRules\">&lt;/script></span>")
+      iface.error("expected exaclty one <script id=\"searchRules\"></script>")
       return;
     }
     var configRoot;

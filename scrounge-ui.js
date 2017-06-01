@@ -93,11 +93,12 @@
       };
       index.target = target;
       var _ul = null;
-      return function () {
-        var args = [].slice.call(arguments);
-        var toAdd = $("<li>" + args.map(elt => {
+      function _emit (klass, args) {
+        var toAdd = $("<li/>").append(args.map(elt => {debugger;
           return elt.toString.apply(elt);
-        }).join(" ") + "</li>");
+        }).join(" "));
+        if (klass)
+          toAdd.addClass(klass);
         if (_ul === null) {
           _ul = $("<ul/>");
           target.append(_ul);
@@ -105,6 +106,24 @@
         _ul.append(toAdd);
         console.log.apply(console, args);
         return toAdd;
+      }
+      function _escape (s) {
+        return s.toString().replace(/</g, "&lt;");
+      }
+
+      return {
+        log: function log () {
+          var args = [].slice.call(arguments).map(_escape);
+          return _emit(null, args);
+        },
+        logHTML: function log () {
+          var args = [].slice.call(arguments);
+          return _emit(null, args);
+        },
+        error: function () {
+          var args = [].slice.call(arguments).map(_escape);
+          return _emit("fail", args);
+        }
       };
     };
     var _queue = Scrounger.makeQueue(() => {
@@ -116,13 +135,14 @@
       _queue.add(url);
 
         var nestedIndex = makeIndex();
-      var logElt = _this.log(`<a href="${url}">${url}</a>`);
+      var logElt = _this.logHTML(`<a href="${url}">${url}</a>`);
         logElt.attr("class", "idle");
-        var nestedInterface = {
-          log: makeLogger(logElt, nestedIndex),
+      var nestedInterface = Object.assign(
+        makeLogger(logElt, nestedIndex),
+        {
           logElt: logElt,
           get: _get
-        };
+        });
 
       var now = Date.now();
       var nextGet = Math.max(Math.round(LastGet + DELAY), now);
@@ -183,10 +203,9 @@
     $("#indexButton").attr("class", DOING).prop("value", "Indexing");
     var logElt = $("#log");
     logElt.attr("class", "doing");
-    return {
-      log: makeLogger(logElt, makeIndex()),
+    return Object.assign(makeLogger(logElt, makeIndex()), {
       logElt: logElt,
       get: _get
-    };
+    });
   }
 })();
