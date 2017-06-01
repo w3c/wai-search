@@ -119,7 +119,7 @@
           return `<span class="key">${k}:</span> <span class="value">${value[k].join(" ")}</span>`;
         });
         _results.
-          append($("<li/>").
+          append($("<li/>").addClass("log").
                  append("<span class=\""+KEY+"\">"+key+":</span>").
                  append(" ").
                  append($("<pre>" + valsHTML.join("\n") + "</pre>")).
@@ -131,11 +131,12 @@
       // Display errors like 404s.
       index.fail = function (heading, msg) {
         _results.
-          append($("<li/>").
+          append($("<li/>").addClass("fail").
                  append("<span class=\""+KEY+"\">"+heading+":</span>").
                  append(" ").
-                 append($("<span class=\""+VALUE+"\">"+msg+"</span>")).
-                 append("\n") /* for sane view source */);
+                 append($("<pre class=\""+VALUE+"\">"+msg+"</pre>")).
+                 append("\n") /* for sane view source */
+                ).closest("li").addClass("fail");
         _count.text(parseInt(_count.text())+1);
       };
 
@@ -145,9 +146,9 @@
       // Paint <li/> into target's <ul/>.
       var _ul = null;
       function _emit (klass, args) {
-        var toAdd = $("<li/>").append(args.map(elt => {debugger;
+        var toAdd = $("<li/>").append($("<pre/>").append(args.map(elt => {
           return elt.toString.apply(elt);
-        }).join(" "));
+        }).join(" ")));
         if (klass)
           toAdd.addClass(klass);
         if (_ul === null) {
@@ -169,7 +170,7 @@
       return {
         log: function log () {
           var args = [].slice.call(arguments).map(_escape);
-          return _emit(null, args);
+          return _emit("log", args);
         },
         logHTML: function log () {
           var args = [].slice.call(arguments);
@@ -237,7 +238,6 @@
                        );
             invokeCallback(elt);
           }).fail(function (jqXHR, textStatus, errorThrown) {
-            logElt.attr("class", "fail");
             nestedIndex.fail("GET " + textStatus, errorThrown);
             _queue.finished(url);
           });
@@ -261,7 +261,7 @@
           a.href = rel;
           return a.href;
         }
-        logElt.attr("class", "doing");
+        logElt.removeClass("idle").addClass("doing");
         // 5 invoke associated callback (f) with
         //     nested interface,
         //     jQuery access to loaded element
@@ -270,7 +270,8 @@
         //     nested index.
         f(nestedInterface, find, absolutize, url, nestedIndex);
         setTimeout(() => {
-          logElt.attr("class", "done");
+          logElt.removeClass("doing").
+            addClass("done");
           _queue.finished(url);
         }, 0); // demo [class=doing]
       }

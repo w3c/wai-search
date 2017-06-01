@@ -144,7 +144,7 @@
         if (!("select" in config.region))
           return iface.log("expected select in "+JSON.stringify(config.region));
         if (!("next-anchor" in config.region))
-          return iface.log("expected next-anchor in "+JSON.stringify(config.region));
+          return index.fail("expected next-anchor in ", JSON.stringify(config.region, null, 2));
         var sections = elts.find(config.region.select);
         sections.each((_, section) => {
           var closest = url + "#" + $(section).

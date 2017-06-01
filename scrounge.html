@@ -15,11 +15,14 @@
       li.idle  { background-color: #bbb; }
       li.doing { background-color: #cc0; }
       li.done  { background-color: #be0; }
+      ul.index { padding-left: 1ex; }
       .index { background-color: #ddd; display: none; }
-      .index pre { margin: 0; }
+      .index pre { margin: 0 0 3ex; }
       .count { color: blue; }
       .key { font-weight: bold; }
-      .fail { background-color: #fcc; }
+      li.log, li.fail { list-style-type: none; }
+      li.fail { background-color: #fcc; }
+      li > pre { display: inline; }
     </style>
   </head>
   <body>
