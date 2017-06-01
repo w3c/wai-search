@@ -174,11 +174,16 @@
       var found = config.find.reduce((acc, find) =>  {
         innerElts = elts.find(find.select);
         var addMe = {};
-        if ("attribute" in find) {
-          addMe[find.quality] = innerElts.attr(find.attribute);
-        } else {
-          addMe[find.quality] = [innerElts.text()];
+        var val = "attribute" in find ?
+            innerElts.attr(find.attribute) :
+            addMe[find.quality] = [innerElts.text()];
+        if ("replace" in find) {
+          val = find.replace.reduce((acc, pair) => {
+            var regexp = new RegExp(pair[0], pair[2] || "");
+            return acc.replace(regexp, pair[1]);
+          }, val);
         }
+        addMe[find.quality] = val;
         index.set(href, addMe);
         return acc.add(innerElts);
       }, $("create empty selection"));
