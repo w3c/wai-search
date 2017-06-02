@@ -3,17 +3,37 @@
   // var Site = "http://90.9.146.48/";
   var Site = "http://localhost/";
 
-  function startCrawl (iface) {
-    [
-      { path: "WAI/perspectives/", func: parsePerspectives },
-      { path: "WAI/perspectives/", func: parseDirected },
+  var SearchRules = `{
+  "region": {
+    "select": ".video-listing li",
+    "follow": "a",
+    "flavors": ["all", "video"],
+    "find": [
+      { "select": "meta[name=description]", "attribute": "content", "quality": 1, "replace": [
+        ["^Short? +video +about +", ""],
+        [" - what (is it|are they).*", ""],
+        [" for web accessibility$", ""]
+      ]}
+    ]
+  }
+}`;
+
+  var TargetList = [
+      // { path: "WAI/perspectives/", func: parsePerspectives },
+      { path: "WAI/perspectives/", func: parseDirected, sr: SearchRules },
       { path: "WAI/tutorials/", func: parseTutorials },
       { path: "WAI/bcase/", func: parseBCase },
       { path: "WAI/eval/preliminary.php", func: parseDirected },
       // { path: "WAI/eval/p2.php", func: parseDirected },
-    ].forEach(g => {
+    ]
+
+  function startCrawl (iface, targetList) {
+    targetList.forEach(g => {
       var url = Site+g.path;
-      iface.get(url, g.func);
+      var cb = (iface, jQuery, getAbs, url, index) => {
+        g.func(iface, jQuery, getAbs, url, index, g.sr);
+      };
+      iface.get(url, cb);
     });
 
   }
@@ -102,18 +122,18 @@
       );
     });
   }
-  function parseDirected (iface, jQuery, getAbs, url, index) {
+  function parseDirected (iface, jQuery, getAbs, url, index, searchRules) {
     // notes on how to extend interface
     var statusButton = $("<button/>").text("conf");
     var statusText = $("<div/>").text("sss");
     iface.logElt.find(".index").before(status);
-    if (jQuery("#searchRules").length !== 1) {
-      iface.error("expected exaclty one <script id=\"searchRules\"></script>");
+    if (!searchRules && jQuery("#searchRules").length !== 1) {
+      iface.error("expected exaclty one <script id=\"searchRules\"></script> in the source");
       return;
     }
     var configRoot;
     try {
-      configRoot = JSON.parse(jQuery("#searchRules").text());
+      configRoot = JSON.parse(searchRules || jQuery("#searchRules").text());
     } catch (e) {
       iface.log("<span class=\"error\">"+e.toString().replace(/</g, "&lt;")+"</span><pre>"+jQuery("#searchRules").text()+"</pre>")
       return;
@@ -151,19 +171,21 @@
             parseDirectives($(section), config.region, closest, flavors, index);
           });
         } else if ("follow" in config.region) {
-          sections.each((_, section) => {debugger;
-            $(section).find(config.region.follow).each((idx, a) => {
-              var href = getAbs($(a).attr("href"));
-              iface.get(
-                href,
-                function (iface, jQuery, getAbs, url, index) {
-                  parseDirectives({
-                    find: function () {
-                      return jQuery.apply(jQuery, [].slice.call(arguments));
-                    }
-                  }, config.region, url, flavors, index);
-                });
-            });
+          var az = sections.map((_, section) => {
+            return $(section).find(config.region.follow);
+          });
+          iface.log("scraping", az.length, "pages:");
+          az.each((idx, a) => {
+            var href = getAbs($(a).attr("href"));
+            iface.get(
+              href,
+              function (iface, jQuery, getAbs, url, index) {
+                parseDirectives({
+                  find: function () {
+                    return jQuery.apply(jQuery, [].slice.call(arguments));
+                  }
+                }, config.region, url, flavors, index);
+              });
           });
         } else {
           return index.fail("expected next-anchor or follow in", JSON.stringify(config.region, null, 2));
@@ -171,7 +193,7 @@
         return;
       }
       var indexMe = {};
-      var found = config.find.reduce((acc, find) =>  {
+      var found = config.find.reduce((acc, find) => {
         innerElts = elts.find(find.select);
         var addMe = {};
         var val = "attribute" in find ?
@@ -211,6 +233,7 @@
     };
   }
   var exportMe = {
+    targetList: TargetList,
     makeQueue: makeQueue,
     startCrawl: startCrawl
   };

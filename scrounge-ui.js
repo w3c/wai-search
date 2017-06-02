@@ -26,8 +26,31 @@
 
   // Kick everything off with startCrawl.
   $(document).ready(() => {
+    window.Scrounger.targetList.forEach(target => {
+      var _script = $("<textarea class=\""+INDEX+"\"/>").val(target.sr);
+      var _expand = $("<button class=\""+COUNT+"\"/>").
+          text("sr" in target ? target.sr.length : "-").
+          on("click", function (evt) {
+            var newDisplay = _script.css("display") === RENDERED_RESULT ?
+                "none" :
+                RENDERED_RESULT;
+            _script.css("display", newDisplay);
+          });
+      var li = $("<li/>").
+          text(target.path).
+          append(_expand).
+          append(_script);
+      $("#targetList").append(li);
+    });
     $("#indexButton").click(() => {
-      window.Scrounger.startCrawl(getInterface());
+      window.Scrounger.startCrawl(getInterface(), window.Scrounger.targetList);
+      $("#clear").prop("disabled", false);
+    });
+    $("#clear").click(() => {
+      $("#log").empty();
+      $("#results").empty();
+      $("#indexButton").attr("class", null).prop("value", "Index");
+      $("#clear").prop("disabled", true);
     });
   });
 
@@ -38,7 +61,7 @@
     var rootIndex = {};
 
     // Create a GET queue.
-    var _queue = Scrounger.makeQueue(() => {
+    var _queue = window.Scrounger.makeQueue(() => {
       $("#results").append(JSON.stringify(rootIndex, null, 2)+"\n");
       $("#indexButton").attr("class", DONE).prop("value", "Indexed");
     });
@@ -123,7 +146,6 @@
                  append("<span class=\""+KEY+"\">"+key+":</span>").
                  append(" ").
                  append($("<pre>" + valsHTML.join("\n") + "</pre>")).
-                 append($("<br/>")).
                  append("\n") /* for sane view source */);
         _count.text(parseInt(_count.text())+1);
       };

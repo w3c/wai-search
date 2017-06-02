@@ -3,7 +3,7 @@
 (function(iface) {
 
   var scrounge = require('./scroungelib');
-  scrounge.startCrawl(iface)
+  scrounge.startCrawl(iface, scrounge.targetList)
 })(getInterface());
 
 function getInterface () {
