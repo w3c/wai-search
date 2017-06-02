@@ -12,23 +12,24 @@
       #indexButton.doing { background-color: #cc0; }
       #indexButton.done  { background-color: #be0; }
       #indexButton { width: 5em; }
-      li.idle  { background-color: #bbb; }
-      li.doing { background-color: #cc0; }
-      li.done  { background-color: #be0; }
+      .idle  { background-color: #bbb; }
+      .doing { background-color: #cc0; }
+      .done  { background-color: #be0; }
       ul.index { padding-left: 1ex; }
       .index { background-color: #ddd; display: none; }
       .index pre { margin: 0 0 3ex; }
       .count { color: blue; }
       .key { font-weight: bold; }
       li.log, li.fail { list-style-type: none; }
-      li.fail { background-color: #fcc; }
+      .fail { background-color: #fcc; }
       li > pre { display: inline; }
     </style>
   </head>
   <body>
     <ul id="targetList">
+      <li class="fail"><h1>script not loaded</h1><h2>check your console for diagnostics</h2></li>
     </ul>
-    <input type="button" id="indexButton" value="Index" />
+    <input type="button" id="indexButton" value="Index" disabled="disabled" />
     <input type="button" id="clear" value="clear" disabled="disabled"/>
     <hr/>
     <div id="log" class="idle"></div>

@@ -9,6 +9,7 @@
   const LOG_TO_CONSOLE = false; // mirror logged message to the console.
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
+  const LENGTH = "length";
   const INDEX = "index";
   const KEY = "key";
   const VALUE = "value";
@@ -26,26 +27,53 @@
 
   // Kick everything off with startCrawl.
   $(document).ready(() => {
+    $("#targetList").empty();
     window.Scrounger.targetList.forEach(target => {
-      var _script = $("<textarea class=\""+INDEX+"\"/>").val(target.sr);
-      var _expand = $("<button class=\""+COUNT+"\"/>").
-          text("sr" in target ? target.sr.length : "-").
+      var _script = $("<textarea>").
+          addClass(INDEX).
+          attr("rows", 10).
+          css("width", "100%").
+          val(target.sr);
+      var _expand = $("<button/>").
+          addClass(COUNT).
+          append(summarizeRule(target.sr)).
           on("click", function (evt) {
-            var newDisplay = _script.css("display") === RENDERED_RESULT ?
-                "none" :
-                RENDERED_RESULT;
+            var nowShowing =_script.css("display") === RENDERED_RESULT;
+            var newDisplay = nowShowing ? "none" : RENDERED_RESULT;
+            if (nowShowing) {
+              target.sr = _script.val();
+              _expand.empty().append(summarizeRule(target.sr))
+            }
             _script.css("display", newDisplay);
           });
       var li = $("<li/>").
           text(target.path).
+          append(" ").
           append(_expand).
           append(_script);
       $("#targetList").append(li);
+
+      function summarizeRule (rule) {
+        if (!rule)
+          return "add rule";
+        try {
+          var json = JSON.parse(rule);
+          return $("<span/>").
+            append("edit rule (").
+            append($("<span/>").addClass(LENGTH).text(rule.match(/\n/g).length)).
+            append(" lines)");
+        } catch (e) {
+          return $("<span/>").
+            append("edit broken rule (").
+            append($("<span/>").addClass("fail").text(e.toString())).
+            append(")");
+        }
+      }
     });
     $("#indexButton").click(() => {
       window.Scrounger.startCrawl(getInterface(), window.Scrounger.targetList);
       $("#clear").prop("disabled", false);
-    });
+    }).prop("disabled", false);
     $("#clear").click(() => {
       $("#log").empty();
       $("#results").empty();
@@ -64,6 +92,7 @@
     var _queue = window.Scrounger.makeQueue(() => {
       $("#results").append(JSON.stringify(rootIndex, null, 2)+"\n");
       $("#indexButton").attr("class", DONE).prop("value", "Indexed");
+      $("#log").removeClass("doing").addClass("done");
     });
 
     // Update the index button.
@@ -106,8 +135,8 @@
     // Create logger interface with log, error API.
     // logHMTL is used only by scrounge-ui; it has no parallel in scrounge-cli.
     function makeLogger (target, index) {
-      var _results = $("<ul class=\""+INDEX+"\"/>");
-      var _count = $("<button class=\""+COUNT+"\">0</button>").
+      var _results = $("<ul/>").addClass(INDEX);
+      var _count = $("<button/>").addClass(COUNT).text("0").
           on("click", function (evt) {
             var newDisplay = _results.css("display") === RENDERED_RESULT ?
                 "none" :
@@ -137,15 +166,18 @@
         // Propagate set call to inherited settter.
         _oldSet.call(index, key, value);
 
-        // Paint HTML results.
+        // Paint index entry in HTML.
         var valsHTML = Object.keys(value).map(k => {
-          return `<span class="key">${k}:</span> <span class="value">${value[k].join(" ")}</span>`;
+          return $("<span/>").
+            append($("<span/>").addClass("key").text(k)).
+            append(" ").
+            append($("<span/>").addClass("value").text(value[k].join(" ")));
         });
         _results.
           append($("<li/>").addClass("log").
-                 append("<span class=\""+KEY+"\">"+key+":</span>").
+                 append($("<span/>").addClass(KEY).text(key + ":")).
                  append(" ").
-                 append($("<pre>" + valsHTML.join("\n") + "</pre>")).
+                 append($("<pre/>").append(valsHTML)).
                  append("\n") /* for sane view source */);
         _count.text(parseInt(_count.text())+1);
       };
@@ -154,9 +186,9 @@
       index.fail = function (heading, msg) {
         _results.
           append($("<li/>").addClass("fail").
-                 append("<span class=\""+KEY+"\">"+heading+":</span>").
+                 append($("<span/>").addClass(KEY).text(heading + ":")).
                  append(" ").
-                 append($("<pre class=\""+VALUE+"\">"+msg+"</pre>")).
+                 append($($("<pre/>").addClass(VALUE).text(msg))).
                  append("\n") /* for sane view source */
                 ).closest("li").addClass("fail");
         _count.text(parseInt(_count.text())+1);
@@ -198,10 +230,10 @@
           var args = [].slice.call(arguments);
           return _emit(null, args);
         },
-        error: function () {
-          var args = [].slice.call(arguments).map(_escape);
-          return _emit("fail", args);
-        }
+        // error: function () {
+        //   var args = [].slice.call(arguments).map(_escape);
+        //   return _emit("fail", args);
+        // }
       };
     };
 
@@ -292,7 +324,8 @@
         //     nested index.
         f(nestedInterface, find, absolutize, url, nestedIndex);
         setTimeout(() => {
-          logElt.removeClass("doing").
+          logElt.
+            removeClass("doing").
             addClass("done");
           _queue.finished(url);
         }, 0); // demo [class=doing]

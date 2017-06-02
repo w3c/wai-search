@@ -128,14 +128,14 @@
     var statusText = $("<div/>").text("sss");
     iface.logElt.find(".index").before(status);
     if (!searchRules && jQuery("#searchRules").length !== 1) {
-      iface.error("expected exaclty one <script id=\"searchRules\"></script> in the source");
+      index.fail("index rules", "expected exaclty one <script id=\"searchRules\"></script> in the source");
       return;
     }
     var configRoot;
     try {
       configRoot = JSON.parse(searchRules || jQuery("#searchRules").text());
     } catch (e) {
-      iface.log("<span class=\"error\">"+e.toString().replace(/</g, "&lt;")+"</span><pre>"+jQuery("#searchRules").text()+"</pre>")
+      index.fail(e.toString())
       return;
     }
     parseDirectives({
