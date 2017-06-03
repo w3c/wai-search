@@ -29,31 +29,63 @@
   $(document).ready(() => {
     $("#targetList").empty();
     window.Scrounger.targetList.forEach(target => {
-      var _script = $("<textarea>").
-          addClass(INDEX).
-          attr("spellcheck", "false").
-          attr("rows", 10).
-          css("width", "100%").
-          val(target.sr);
-      var _expand = $("<button/>").
-          addClass(COUNT).
-          append(summarizeRule(target.sr)).
-          on("click", function (evt) {
-            var nowShowing =_script.css("display") === RENDERED_RESULT;
-            var newDisplay = nowShowing ? "none" : RENDERED_RESULT;
-            if (nowShowing) {
-              target.sr = _script.val();
-              _expand.empty().append(summarizeRule(target.sr))
-            }
-            _script.css("display", newDisplay);
-          });
-      var li = $("<li/>").
-          // text(target.path).
-          append($("<input/>").val(target.path)).
-          append(" ").
-          append(_expand).
-          append(_script);
+      var li = addTargetRow(null);
+      li.find(".summary").empty().append(summarizeRule(target.sr));
+      li.find(".rule").val(target.sr);
+      li.find(".path").val(target.path);
       $("#targetList").append(li);
+
+      function addTargetRow (evt) {
+        var add = $('<button class="addTarget" title="add a target">+</button>');
+        add.on("click", addTargetRow);
+        var remove = $('<button class="removeTarget" title="remove this target">-</button>');
+        remove.on("click", removeTargetRow);
+
+        var _script = $("<textarea>").
+            addClass("rule").addClass(INDEX).
+            attr("spellcheck", "false").
+            attr("rows", 10).
+            css("width", "100%");
+        var _expand = $("<button/>").
+            append(summarizeRule("")).
+            addClass("summary").addClass(COUNT).
+            on("click", function (evt) {
+              var nowShowing =_script.css("display") === RENDERED_RESULT;
+              var newDisplay = nowShowing ? "none" : RENDERED_RESULT;
+              if (nowShowing)
+                _expand.empty().append(summarizeRule(_script.val()))
+              _script.css("display", newDisplay);
+            });
+        var li = $("<li/>").
+            append(add, remove).
+            append($("<input/>").addClass("path")).
+            append(" ").
+            append(_expand).
+            append(_script);
+        if (evt) {
+          $(evt.target).parent().after(li);
+        } else {
+          $("#shapeMap").append(li);
+        }
+
+        if ($(".removeTarget").length === 1)
+          $(".removeTarget").css("visibility", "hidden");
+        else
+          $(".removeTarget").css("visibility", "visible");
+
+        return li;
+      }
+
+      function removeTargetRow (evt) {
+        if (evt) {
+          $(evt.target).parent().remove();
+        } else {
+          $(".target").remove();
+        }
+        if ($(".removeTarget").length === 1)
+          $(".removeTarget").css("visibility", "hidden");
+        return false;
+      }
 
       function summarizeRule (rule) {
         if (!rule)
@@ -74,7 +106,12 @@
     });
     $("#indexButton").click(() => {
       $("#log").append($("<h2/>").css("display", "inline").text("search index: "));
-      window.Scrounger.startCrawl(getInterface(), window.Scrounger.targetList);
+      var uiTargetList = $("#targetList li").map((idx, li) => {
+        return {
+          path: $(li).find("input").val(),
+          sr: $(li).find("textarea").val()};
+      }).get();
+      window.Scrounger.startCrawl(getInterface(), uiTargetList);
       $("#clear").prop("disabled", false);
     }).prop("disabled", false);
     $("#clear").click(() => {

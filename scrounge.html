@@ -23,12 +23,26 @@
       li.log, li.fail { list-style-type: none; }
       .fail { background-color: #fcc; }
       li > pre { display: inline; }
+
+      .target button {
+          width: 1em;
+          padding: .5em 0;
+          padding-right: .5em;
+      }
+
+      .addTarget, .removeTarget {
+          font-size: 80%;
+          line-height: 1ex;
+          font-family: monospace;
+      }
+      p, ol { margin: 0; }
     </style>
   </head>
   <body>
-    <ul id="targetList">
+    <p>Target list:</p>
+    <ol id="targetList">
       <li class="fail"><h1>script not loaded</h1><h2>check your console for diagnostics</h2></li>
-    </ul>
+    </ol>
     <input type="button" id="indexButton" value="Index" disabled="disabled" />
     <input type="button" id="clear" value="clear" disabled="disabled"/>
     <hr/>
