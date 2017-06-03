@@ -71,14 +71,14 @@
     { path: "WAI/tutorials/", func: parseDirected, sr: tutorialsRules },
     { path: "WAI/bcase/", func: parseDirected, sr: bcaseRules },
     { path: "WAI/eval/preliminary.php", func: parseDirected, sr: preliminaryRules },
-      // { path: "WAI/eval/p2.php", func: parseDirected },
-    ]
+    // { path: "WAI/eval/p2.php", func: parseDirected },
+  ];
 
   function startCrawl (iface, targetList) {
     targetList.forEach(g => {
       var url = Site+g.path;
       var cb = (iface, jQuery, getAbs, url, index) => {
-        g.func(iface, jQuery, getAbs, url, index, g.sr);
+        parseDirected(iface, jQuery, getAbs, url, index, g.sr);
       };
       iface.get(url, cb);
     });
