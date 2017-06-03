@@ -6,29 +6,32 @@
   var perspectivesRules = `{
   "region": {
     "select": ".video-listing li",
-    "follow": "a",
-    "flavors": ["all", "video"],
-    "find": [
-      { "select": "meta[name=description]", "attribute": "content", "quality": 1, "replace": [
-        ["^Short? +video +about +", ""],
-        [" - what (is it|are they).*", ""],
-        [" for web accessibility$", ""]
-      ]}
-    ]
+    "follow": {
+      "flavors": ["all", "video"],
+      "find": [
+        { "select": "meta[name=description]", "attribute": "content", "quality": 1, "replace": [
+          ["^Short? +video +about +", ""],
+          [" - what (is it|are they).*", ""],
+          [" for web accessibility$", ""]
+        ]}
+      ]
+    }
   }
 }`;
 
   var tutorialsRules = `{
   "region": {
     "select": "ul.topics li",
-    "follow": "a",
-    "flavors": ["all", "tutorial"],
-    "region": {
-      "select": "ul[aria-labelledby=list-heading-tutorials] li",
-      "follow": "a",
-      "find": [
-        { "select": "h2", "quality": 1}
-      ]
+    "follow": {
+      "flavors": ["all", "tutorial"],
+      "region": {
+        "select": "ul[aria-labelledby=list-heading-tutorials] li",
+        "follow": {
+          "find": [
+            { "select": "h2", "quality": 1}
+          ]
+        }
+      }
     }
   }, "missing": "index"
 }`;
@@ -45,14 +48,29 @@
        "quality": 0.5
      }
    }
- }
-  `;
+ }`;
+
+  var bcaseRules = `{
+  "region": {
+    "select": "li.listspaced",
+    "find": [
+      { "select": ">", "attribute": "content", "quality": 1}
+    ],
+    "follow": {
+      "flavors": ["all", "video"],
+      "find": [
+        { "select": "h2 a", "then": "parent()", "quality": 0}
+      ],
+      "rest": { "quality": 1}
+    }
+  }
+}`;
+
   var TargetList = [
-      // { path: "WAI/perspectives/", func: parsePerspectives },
-      { path: "WAI/perspectives/", func: parseDirected, sr: SearchRules },
-      { path: "WAI/tutorials/", func: parseTutorials },
-      { path: "WAI/bcase/", func: parseBCase },
-      { path: "WAI/eval/preliminary.php", func: parseDirected },
+    { path: "WAI/perspectives/", func: parseDirected, sr: perspectivesRules },
+    { path: "WAI/tutorials/", func: parseDirected, sr: tutorialsRules },
+    { path: "WAI/bcase/", func: parseDirected, sr: bcaseRules },
+    { path: "WAI/eval/preliminary.php", func: parseDirected, sr: preliminaryRules },
       // { path: "WAI/eval/p2.php", func: parseDirected },
     ]
 
@@ -67,90 +85,6 @@
 
   }
 
-  /** 
-   * page parsers
-   */
-  function parsePerspectives (iface, jQuery, getAbs, url, index) {
-    var videoPages = jQuery(".video-listing li");
-    iface.log("scraping", videoPages.length, "video pages:");
-    videoPages.each((idx, li) => {
-      var perspectiveName = jQuery(li).find("a").attr("href");
-      var perspectivePageUrl = getAbs(perspectiveName);
-
-      iface.get(
-        perspectivePageUrl,
-        function (iface, jQuery, getAbs, url, index) {
-          var desc = jQuery("meta[name=description]").attr("content").
-              replace(/^Short? +video +about +/, "").
-              replace(/ - what (is it|are they).*/, "").
-              replace(/ for web accessibility$/, "");
-          index.set(perspectivePageUrl, {
-            1: desc
-          });
-        }
-      );
-    });
-  }
-  function parseTutorials (iface, jQuery, getAbs, url, index) {
-    var videoPages = jQuery("ul.topics li");
-    iface.log("scraping", videoPages.length, "video pages:");
-    videoPages.each((idx, li) => {
-      var relativeName = jQuery(li).find("a").attr("href");
-      var pageURL = getAbs(relativeName);
-      iface.get(
-        pageURL,
-        function (iface, jQuery, getAbs, url, index) {
-          var subPages = jQuery("ul[aria-labelledby=list-heading-tutorials] li")
-          //              .filter((_, elt) => { return $(elt).find("a").length > 0; })
-          ;
-          iface.log(subPages.length, "sub-pages"); // , subPages.find("a").attr("href").get().join(",")
-          subPages.each((idx, li) => {
-            var tutorialName = jQuery(li).find("a").attr("href");
-            var tutorialPageUrl = getAbs(tutorialName);
-
-            iface.get(
-              tutorialPageUrl,
-              function (iface, jQuery, getAbs, url, index) {
-                var headings = jQuery("h2");
-                // iface.log(tutorialPageUrl, headings.length);
-                var desc = headings.map((idx, h) => {
-                  return jQuery(h).text();
-                }).get();
-                index.set(tutorialPageUrl, { 1: desc });
-              }
-            );
-          });
-        }
-      );
-    });
-  }
-  function parseBCase (iface, jQuery, getAbs, url, index) {
-    var videoPages = jQuery("li.listspaced");
-    index.set(url, {
-      1: videoPages.text()
-    });
-    iface.log("scraping", videoPages.length, "bcase pages:");
-    videoPages.each((idx, li) => {
-      var bCaseName = jQuery(li).find("a").attr("href");
-      var bCasePageUrl = getAbs(bCaseName);
-
-      iface.get(
-        bCasePageUrl,
-        function (iface, jQuery, getAbs, url, index) {
-          var sections = jQuery("h2 a").parent();
-          var theRest = sections.nextAll().not(sections);
-          index.set(bCasePageUrl, {
-            0: sections.map((i, e) => {
-              return jQuery(e).text();
-            }).get(),
-            1: theRest.map((i, e) => {
-              return jQuery(e).text();
-            }).get()
-          });
-        }
-      );
-    });
-  }
   function parseDirected (iface, jQuery, getAbs, url, index, searchRules) {
     iface.logElt.find(".index").before(status);
     if (!searchRules && jQuery("#searchRules").length !== 1) {
@@ -190,7 +124,7 @@
           });
         } else if ("follow" in config.region) {
           var az = sections.map((_, section) => {
-            return $(section).find(config.region.follow);
+            return $(section).find("a");
           });
           iface.log("scraping", az.length, "pages:");
           az.each((idx, a) => {
@@ -202,7 +136,7 @@
                   find: function () {
                     return jQuery2.apply(jQuery2, [].slice.call(arguments));
                   }
-                }, getAbs2, url2, index2, config.region, flavors, missing);
+                }, getAbs2, url2, index2, config.region.follow, flavors, missing);
               });
           });
         } else {
@@ -214,6 +148,9 @@
       var found = config.find.reduce((acc, find) => {
         innerElts = elts.find(find.select);
         var addMe = {};
+        if ("then" in find) {
+          eval(`innerElts = innerElts.${find.then};`);
+        }
         var val = "attribute" in find ?
             innerElts.attr(find.attribute) :
             addMe[find.quality] = [innerElts.text()];
@@ -355,13 +292,21 @@
         }
         return acc.add(innerElts);
       }, $("create empty selection"));
-      found.remove();
       if ("rest" in config) {
         var addMe = {};
-        addMe[config.rest.quality] = elts.children().map((i, e) => {
+        found.remove(); // Remove stuff we've already indexed.
+        addMe[config.rest.quality] = elts.find(">").map((i, e) => {
           return jQuery(e).text();
         }).get();
         index.set(url, addMe);
+
+        // Handy array equivalence function for debuggin and testing.
+        function aeq (l, r) {
+          return l.length === r.length &&
+            l.reduce((acc, elt, i) => {
+              return acc && l[i] === r[i];
+            }, true);
+        }
       }
     } catch (e) {
       return index.fail("error", e.toString());
