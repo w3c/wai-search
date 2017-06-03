@@ -31,6 +31,7 @@
     window.Scrounger.targetList.forEach(target => {
       var _script = $("<textarea>").
           addClass(INDEX).
+          attr("spellcheck", "false").
           attr("rows", 10).
           css("width", "100%").
           val(target.sr);
@@ -47,7 +48,8 @@
             _script.css("display", newDisplay);
           });
       var li = $("<li/>").
-          text(target.path).
+          // text(target.path).
+          append($("<input/>").val(target.path)).
           append(" ").
           append(_expand).
           append(_script);
@@ -55,7 +57,7 @@
 
       function summarizeRule (rule) {
         if (!rule)
-          return "add rule";
+          return "create rule";
         try {
           var json = JSON.parse(rule);
           return $("<span/>").
@@ -71,12 +73,12 @@
       }
     });
     $("#indexButton").click(() => {
+      $("#log").append($("<h2/>").css("display", "inline").text("search index: "));
       window.Scrounger.startCrawl(getInterface(), window.Scrounger.targetList);
       $("#clear").prop("disabled", false);
     }).prop("disabled", false);
     $("#clear").click(() => {
       $("#log").empty();
-      $("#results").empty();
       $("#indexButton").attr("class", null).prop("value", "Index");
       $("#clear").prop("disabled", true);
     });
@@ -86,13 +88,12 @@
   function getInterface () {
     // We will create nested indexes as we recurse through pages and
     // their set calls will update the rootIndex.
-    var rootIndex = {};
+    var rootIndex = makeIndex();
 
     // Create a GET queue.
     var _queue = window.Scrounger.makeQueue(() => {
-      $("#results").append(JSON.stringify(rootIndex, null, 2)+"\n");
       $("#indexButton").attr("class", DONE).prop("value", "Indexed");
-      $("#log").removeClass("doing").addClass("done");
+      $("#log").removeClass("doing").addClass("done").append("<hr/>");
     });
 
     // Update the index button.
@@ -101,7 +102,7 @@
     // Shared interface includes logging functions and get.
     var logElt = $("#log");
     logElt.attr("class", "doing");
-    return Object.assign(makeLogger(logElt, makeIndex()), {
+    return Object.assign(makeLogger(logElt, rootIndex), {
       logElt: logElt,
       get: get
     });
@@ -112,7 +113,8 @@
       return {
         set: function (key, value) {
           merge(vals, key, value);
-          merge(rootIndex, key, value);
+          if (this !== rootIndex)
+            rootIndex.set(key, value);
           function merge (index, key, values, flavors) {
             if (key in index) {
               Object.keys(value).forEach(k => {

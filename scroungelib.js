@@ -3,7 +3,7 @@
   // var Site = "http://90.9.146.48/";
   var Site = "http://localhost/";
 
-  var SearchRules = `{
+  var perspectivesRules = `{
   "region": {
     "select": ".video-listing li",
     "follow": "a",
@@ -18,6 +18,35 @@
   }
 }`;
 
+  var tutorialsRules = `{
+  "region": {
+    "select": "ul.topics li",
+    "follow": "a",
+    "flavors": ["all", "tutorial"],
+    "find": [
+      { "select": "meta[name=description]", "attribute": "content", "quality": 1, "replace": [
+        ["^Short? +video +about +", ""],
+        [" - what (is it|are they).*", ""],
+        [" for web accessibility$", ""]
+      ]}
+    ]
+  }
+}`;
+
+  var preliminaryRules = ` {
+   "region": {
+     "select": ".search-region",
+     "next-anchor": "[id]",
+     "flavors": ["all", "example"],
+     "find": [
+       { "select": "h2", "quality": 1 }
+     ],
+     "rest": {
+       "quality": 0.5
+     }
+   }
+ }
+  `;
   var TargetList = [
       // { path: "WAI/perspectives/", func: parsePerspectives },
       { path: "WAI/perspectives/", func: parseDirected, sr: SearchRules },
@@ -123,9 +152,6 @@
     });
   }
   function parseDirected (iface, jQuery, getAbs, url, index, searchRules) {
-    // notes on how to extend interface
-    var statusButton = $("<button/>").text("conf");
-    var statusText = $("<div/>").text("sss");
     iface.logElt.find(".index").before(status);
     if (!searchRules && jQuery("#searchRules").length !== 1) {
       index.fail("index rules", "expected exaclty one <script id=\"searchRules\"></script> in the source");
@@ -143,21 +169,9 @@
         return jQuery.apply(jQuery, [].slice.call(arguments));
       }
     }, configRoot, url, ["all"], index);
-    // var sections = jQuery(".search-region");
-    // sections.each((idx, section) => {
-    //   section = jQuery(section);
-    //   var h = section.find("[id]").slice(0, 1);
-    //   var fragment = h.attr("id");
-    //   var closest = url + "#" + fragment;
-    //   var theRest = section.find("*").not(h);
-    //   index.set(closest, {
-    //     0: [h.text()],
-    //     1: theRest.map((i, e) => {
-    //       return jQuery(e).text();
-    //     }).get()
-    //   });
-    // });
+
     function parseDirectives (elts, config, href, flavors, index) {
+      try {
       if ("flavors" in config)
         flavors = config.flavors;
       if ("region" in config) {
@@ -216,6 +230,9 @@
           return jQuery(e).text();
         }).get();
         index.set(href, addMe);
+      }
+      } catch (e) {
+        return index.fail("error", e.toString());
       }
     }
   }
