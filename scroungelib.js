@@ -172,65 +172,65 @@
 
     function parseDirectives (elts, config, href, flavors, index) {
       try {
-      if ("flavors" in config)
-        flavors = config.flavors;
-      if ("region" in config) {
-        if (!("select" in config.region))
-          return iface.log("expected select in "+JSON.stringify(config.region));
-        var sections = elts.find(config.region.select);
-        if ("next-anchor" in config.region) {
-          sections.each((_, section) => {
-            var closest = url + "#" + $(section).
-                find(config.region["next-anchor"]).slice(0, 1).attr("id");
-            parseDirectives($(section), config.region, closest, flavors, index);
-          });
-        } else if ("follow" in config.region) {
-          var az = sections.map((_, section) => {
-            return $(section).find(config.region.follow);
-          });
-          iface.log("scraping", az.length, "pages:");
-          az.each((idx, a) => {
-            var href = getAbs($(a).attr("href"));
-            iface.get(
-              href,
-              function (iface, jQuery, getAbs, url, index) {
-                parseDirectives({
-                  find: function () {
-                    return jQuery.apply(jQuery, [].slice.call(arguments));
-                  }
-                }, config.region, url, flavors, index);
-              });
-          });
-        } else {
-          return index.fail("expected next-anchor or follow in", JSON.stringify(config.region, null, 2));
+        if ("flavors" in config)
+          flavors = config.flavors;
+        if ("region" in config) {
+          if (!("select" in config.region))
+            return iface.log("expected select in "+JSON.stringify(config.region));
+          var sections = elts.find(config.region.select);
+          if ("next-anchor" in config.region) {
+            sections.each((_, section) => {
+              var closest = url + "#" + $(section).
+                  find(config.region["next-anchor"]).slice(0, 1).attr("id");
+              parseDirectives($(section), config.region, closest, flavors, index);
+            });
+          } else if ("follow" in config.region) {
+            var az = sections.map((_, section) => {
+              return $(section).find(config.region.follow);
+            });
+            iface.log("scraping", az.length, "pages:");
+            az.each((idx, a) => {
+              var href = getAbs($(a).attr("href"));
+              iface.get(
+                href,
+                function (iface, jQuery, getAbs, url, index) {
+                  parseDirectives({
+                    find: function () {
+                      return jQuery.apply(jQuery, [].slice.call(arguments));
+                    }
+                  }, config.region, url, flavors, index);
+                });
+            });
+          } else {
+            return index.fail("expected next-anchor or follow in", JSON.stringify(config.region, null, 2));
+          }
+          return;
         }
-        return;
-      }
-      var indexMe = {};
-      var found = config.find.reduce((acc, find) => {
-        innerElts = elts.find(find.select);
-        var addMe = {};
-        var val = "attribute" in find ?
-            innerElts.attr(find.attribute) :
-            addMe[find.quality] = [innerElts.text()];
-        if ("replace" in find) {
-          val = find.replace.reduce((acc, pair) => {
-            var regexp = new RegExp(pair[0], pair[2] || "");
-            return acc.replace(regexp, pair[1]);
-          }, val);
+        var indexMe = {};
+        var found = config.find.reduce((acc, find) => {
+          innerElts = elts.find(find.select);
+          var addMe = {};
+          var val = "attribute" in find ?
+              innerElts.attr(find.attribute) :
+              addMe[find.quality] = [innerElts.text()];
+          if ("replace" in find) {
+            val = find.replace.reduce((acc, pair) => {
+              var regexp = new RegExp(pair[0], pair[2] || "");
+              return acc.replace(regexp, pair[1]);
+            }, val);
+          }
+          addMe[find.quality] = val;
+          index.set(href, addMe);
+          return acc.add(innerElts);
+        }, $("create empty selection"));
+        found.remove();
+        if ("rest" in config) {
+          var addMe = {};
+          addMe[config.rest.quality] = elts.children().map((i, e) => {
+            return jQuery(e).text();
+          }).get();
+          index.set(href, addMe);
         }
-        addMe[find.quality] = val;
-        index.set(href, addMe);
-        return acc.add(innerElts);
-      }, $("create empty selection"));
-      found.remove();
-      if ("rest" in config) {
-        var addMe = {};
-        addMe[config.rest.quality] = elts.children().map((i, e) => {
-          return jQuery(e).text();
-        }).get();
-        index.set(href, addMe);
-      }
       } catch (e) {
         return index.fail("error", e.toString());
       }
