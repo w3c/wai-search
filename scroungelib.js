@@ -23,13 +23,13 @@
     "select": "ul.topics li",
     "follow": "a",
     "flavors": ["all", "tutorial"],
-    "find": [
-      { "select": "meta[name=description]", "attribute": "content", "quality": 1, "replace": [
-        ["^Short? +video +about +", ""],
-        [" - what (is it|are they).*", ""],
-        [" for web accessibility$", ""]
-      ]}
-    ]
+    "region": {
+      "select": "ul[aria-labelledby=list-heading-tutorials] li",
+      "follow": "a",
+      "find": [
+        { "select": "h2", "quality": 1}
+      ]
+    }
   }, "missing": "index"
 }`;
 
@@ -164,13 +164,15 @@
       index.fail(e.toString())
       return;
     }
-    parseDirectives({
+
+    parseDirectives(iface, {
       find: function () {
         return jQuery.apply(jQuery, [].slice.call(arguments));
       }
-    }, configRoot, url, ["all"], undefined, index);
+    }, getAbs, url, index, configRoot, ["all"], undefined);
+  }
 
-    function parseDirectives (elts, config, href, flavors, missing, index) {
+  function parseDirectives (iface, elts, getAbs, url, index, config, flavors, missing) {
       try {
         if ("flavors" in config)
           flavors = config.flavors;
@@ -184,7 +186,7 @@
             sections.each((_, section) => {
               var closest = url + "#" + $(section).
                   find(config.region["next-anchor"]).slice(0, 1).attr("id");
-              parseDirectives($(section), config.region, closest, flavors, missing, index);
+              parseDirectives(iface, $(section), getAbs, closest, index, config.region, flavors, missing);
             });
           } else if ("follow" in config.region) {
             var az = sections.map((_, section) => {
@@ -195,12 +197,12 @@
               var href = getAbs($(a).attr("href"));
               iface.get(
                 href,
-                function (iface, jQuery, getAbs, url, index) {
-                  parseDirectives({
+                function (iface2, jQuery2, getAbs2, url2, index2) {
+                  parseDirectives(iface2, {
                     find: function () {
-                      return jQuery.apply(jQuery, [].slice.call(arguments));
+                      return jQuery2.apply(jQuery2, [].slice.call(arguments));
                     }
-                  }, config.region, url, flavors, missing, index);
+                  }, getAbs2, url2, index2, config.region, flavors, missing);
                 });
             });
           } else {
@@ -223,7 +225,7 @@
               }, val);
             }
             addMe[find.quality] = val;
-            index.set(href, addMe);
+            index.set(url, addMe);
           } else if (missing) {
 
 // https://github.com/pathable/truncate
@@ -359,13 +361,12 @@
           addMe[config.rest.quality] = elts.children().map((i, e) => {
             return jQuery(e).text();
           }).get();
-          index.set(href, addMe);
+          index.set(url, addMe);
         }
       } catch (e) {
         return index.fail("error", e.toString());
       }
     }
-  }
 
   function makeQueue (done) {
     var todo = 0;
