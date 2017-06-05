@@ -148,27 +148,28 @@
     function makeIndex () {
       var vals = {  };
       return {
-        set: function (key, value) {
+       set: function (key, value) {
           merge(vals, key, value);
           if (this !== rootIndex)
             rootIndex.set(key, value);
-          function merge (index, key, values, flavors) {
-            if (key in index) {
-              Object.keys(value).forEach(k => {
-                if (k in index[key])
-                  index[key][k] = index[key][k].concat(values[k]);
-                else
-                  index[key][k] = values[k];
-              });
-            } else {
-              index[key] = value;
-            }
-          }
         },
         get: function () {
           return vals;
         }
       };
+
+      function merge (index, key, values) {
+        if (key in index) {
+          Object.keys(values).forEach(k => {
+            if (k in index[key])
+              index[key][k] = index[key][k].concat(values[k]);
+            else
+              index[key][k] = values[k];
+          });
+        } else {
+          index[key] = values;
+        }
+      }
     }
 
     // Create logger interface with log, error API.
