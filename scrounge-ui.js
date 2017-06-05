@@ -194,7 +194,8 @@
         value = Object.keys(value).reduce((ret, k) => {
           var val = value[k];
           if (typeof val === "string")
-            val = val.split(/\s+/);
+            // val = val.split(/\s+/);
+            val = [val];
           ret[k] = val.map(txt => {
             // TODO: move .replace to valsHTML?
             return txt.replace(/\s+/g, " ").replace(/</g, "&lt;");
