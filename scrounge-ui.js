@@ -30,7 +30,7 @@
     $("#targetList").empty();
     window.Scrounger.targetList.forEach(target => {
       var li = addTargetRow(null);
-      li.find(".summary").empty().append(summarizeRule(target.sr));
+      li.find(".summary").empty().append(summarizeRule(stripComments(target.sr)));
       li.find(".rule").val(target.sr);
       li.find(".path").val(target.path);
       $("#targetList").append(li);
@@ -53,7 +53,7 @@
               var nowShowing =_script.css("display") === RENDERED_RESULT;
               var newDisplay = nowShowing ? "none" : RENDERED_RESULT;
               if (nowShowing)
-                _expand.empty().append(summarizeRule(_script.val()))
+                _expand.empty().append(summarizeRule(stripComments(_script.val())));
               _script.css("display", newDisplay);
             });
         var li = $("<li/>").
@@ -109,7 +109,7 @@
       var uiTargetList = $("#targetList li").map((idx, li) => {
         return {
           path: $(li).find("input").val(),
-          sr: $(li).find("textarea").val()};
+          sr: stripComments($(li).find("textarea").val())};
       }).get();
       window.Scrounger.startCrawl(getInterface(), uiTargetList);
       $("#clear").prop("disabled", false);
@@ -120,6 +120,10 @@
       $("#clear").prop("disabled", true);
     });
   });
+
+  function stripComments (s) {
+    return s.replace(/^\s*\/\/.*$/gm, "");
+  }
 
   // Get interface shared with scrounge-cli.
   function getInterface () {
