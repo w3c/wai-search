@@ -17,13 +17,17 @@
       .done  { background-color: #be0; }
       ul.index { padding-left: 1ex; }
       .index { background-color: #ddd; display: none; }
-      .index pre { margin: 0 0 3ex; }
+      .index div { margin: 0 0 3ex; }
       .count { color: blue; }
       .key { font-weight: bold; }
       li.log, li.fail { list-style-type: none; }
       .fail { background-color: #fcc; }
-      li > pre { display: inline; }
-
+      li > div { display: inline; }
+      div.value { font-family: monospace; }
+      .region { border-left: thick solid gold; }
+      .region:hover {
+        background-color: gold;
+      }
       .target button {
           width: 1em;
           padding: .5em 0;
@@ -36,6 +40,7 @@
           font-family: monospace;
       }
       p, ol { margin: 0; }
+      pre.value { display: flex; }
     </style>
   </head>
   <body>

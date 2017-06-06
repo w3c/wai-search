@@ -8,19 +8,28 @@
     "select": ".video-listing li",
     "follow": {
       "flavors": ["all", "video"],
-      "then": "debugger",
-      "find": [
-        { "select": "meta[name=description]", "attribute": "content", "quality": 0.8, "replace": [
-          ["^Short? +video +about +", ""],
-          [" - what (is it|are they).*", ""],
-          [" for web accessibility$", ""] ]
-        }, {
-          "select": "#main h1 .subhead"
-        }, {
-          "select": "#main h1",
-          "quality": 1
-        }
-      ]
+      "region": {
+        "select": "#main",
+        "find": [
+          // { "select": "meta[name=description]",
+          //   "attribute": "content", "quality": 0.8,
+          //   "replace": [
+          //     ["^Short? +video +about +", ""],
+          //     [" - what (is it|are they).*", ""],
+          //     [" for web accessibility$", ""] ]
+          // },
+          {
+            "select": "h1 .subhead"
+          }, {
+            "select": "h1",
+            "quality": 1
+          }, {
+            "select": "h2",
+            "quality": 0.9
+          }
+        ],
+        "rest": { "quality": 0.1 }
+      }
     }
   }
 }`;
@@ -28,16 +37,21 @@
   var tutorialsRules = `{
   "region": {
     "select": "ul.topics li",
+    // "then": "slice(0,1)",
     "follow": {
       "flavors": ["all", "tutorial"],
-      "region": {
+      "region": [{
         "select": "ul[aria-labelledby=list-heading-tutorials] li",
         "follow": {
+          // "then": "slice(1,2)",
           "find": [
-            { "select": "h2", "quality": 1}
-          ]
+            // remove navigation box
+            { "select": "[role=navigation]"},
+            { "select": "h2,h3", "quality": 1}
+          ],
+          "rest": { "quality": 0.3, "flavors": ["all", "tutorial", "example"] }
         }
-      }
+      }]
     }
   }, "missing": "index"
 }`;
@@ -63,11 +77,14 @@
       { "select": ">", "attribute": "content", "quality": 1}
     ],
     "follow": {
-      "flavors": ["all", "video"],
-      "find": [
-        { "select": "h2 a", "then": "parent()", "quality": 0}
-      ],
-      "rest": { "quality": 1}
+      "flavors": ["all", "benefit"],
+      "region": {
+        "select": "#main",
+        "find": [
+          { "select": "h2 a", "then": "parent()", "quality": 1}
+        ],
+        "rest": { "quality": 0.2}
+      }
     }
   }
 }`;
@@ -114,27 +131,42 @@
 
   function parseDirectives (iface, elts, getAbs, url, index, config, flavors, missing) {
     try {
-      if ("then" in config) {
-        eval(config.then);
-      }
       if ("flavors" in config)
         flavors = config.flavors;
       if ("missing" in config)
         missing = config.missing;
       if ("region" in config) {
-        if (!("select" in config.region))
-          return iface.log("expected select in "+JSON.stringify(config.region));
-        var sections = elts.find(config.region.select);
-        if ("next-anchor" in config.region) {
-          sections.each((_, section) => {
-            var closest = url + "#" + $(section).
-                find(config.region["next-anchor"]).slice(0, 1).attr("id");
-            parseDirectives(iface, $(section), getAbs, closest, index, config.region, flavors, missing);
-          });
-        } else if ("follow" in config.region) {
+        if (config.region.constructor === Array)
+          config.region.forEach(region => {
+            processRegion(elts, region);
+          })
+        else
+          processRegion(elts, config.region);
+      }
+      var indexMe = {};
+      if ("find" in config) {
+        var found = config.find.reduce((acc, find) => {
+          return acc.add(parseThenElse(elts.find(find.select), find));
+        }, $("create empty selection"));
+      }
+      if ("rest" in config) {debugger;
+        return parseThenElse(elts.find(">"), config.rest);
+      }
+
+      function processRegion (elts, config) {
+        if (!("select" in config))
+          return iface.log("expected select in "+JSON.stringify(config));
+        var sections = elts.find(config.select);
+        if ("then" in config) {
+          eval(`sections = sections.${config.then};`);
+        }
+        if ("follow" in config) {
           var az = sections.map((_, section) => {
             return $(section).find("a");
           });
+          if ("then" in config.follow) {
+            eval(`az = az.${config.follow.then};`);
+          }
           iface.log("scraping", az.length, "pages:");
           az.each((idx, a) => {
             var href = getAbs($(a).attr("href"));
@@ -145,20 +177,23 @@
                   find: function () {
                     return jQuery2.apply(jQuery2, [].slice.call(arguments));
                   }
-                }, getAbs2, url2, index2, config.region.follow, flavors, missing);
+                }, getAbs2, url2, index2, config.follow, flavors, missing);
               });
           });
+        } else if ("next-anchor" in config) {
+          sections.each((_, section) => {
+            var closest = url + "#" + $(section).
+                find(config["next-anchor"]).slice(0, 1).attr("id");
+            parseDirectives(iface, $(section), getAbs, closest, index, config, flavors, missing);
+            });
         } else {
-          return index.fail("expected next-anchor or follow in", JSON.stringify(config.region, null, 2));
+          sections.each((_, section) => {
+            parseDirectives(iface, $(section), getAbs, url, index, config, flavors, missing);
+            });
+        // } else {
+        //   return index.fail("expected next-anchor or follow in", JSON.stringify(config, null, 2));
         }
         return;
-      }
-      var indexMe = {};
-      var found = config.find.reduce((acc, find) => {
-        return acc.add(parseThenElse(elts.find(find.select), find));
-      }, $("create empty selection"));
-      if ("rest" in config) {
-        return parseThenElse(elts.find(">"), config.rest);
       }
 
       function parseThenElse (innerElts, config) {
@@ -166,26 +201,29 @@
           eval(`innerElts = innerElts.${config.then};`);
         }
         if ("quality" in config) {
-          var val = "attribute" in config ?
-              innerElts.attr(config.attribute) :
-              innerElts.text();
-          if (val) {
+          var vals = innerElts.map((idx, elt) => {
+            return "attribute" in config ?
+              $(elt).attr(config.attribute) :
+              $(elt).text();
+          }).get().filter(val => {
+            return val ? true : false;
+          });
+          // vals will be [] if there were no matches.
+          if (vals.length) {
             if ("replace" in config) {
-              val = config.replace.reduce((acc, pair) => {
-                var regexp = new RegExp(pair[0], pair[2] || "");
-                return acc.replace(regexp, pair[1]);
-              }, val);
+              vals = vals.map(val => {
+                return config.replace.reduce((acc, pair) => {
+                  var regexp = new RegExp(pair[0], pair[2] || "");
+                  return acc.replace(regexp, pair[1]);
+                }, val);
+              });
             }
-            // var addMe = {};
-            // addMe[config.rest.quality] = elts.find(">").map((i, e) => {
-            //   return jQuery(e).text();
-            // }).get();
-            var addMe = (q, v) => {
-              var ret = {}; ret[q] = v; return ret;
-            };
-            index.set(url, addMe(config.quality, val));
-
-            // index.set4(url, flavors, config.quality, val);
+            vals = vals.map(val => {
+              return val.replace(/(\s+)/g, t => {
+                return t[0];
+              });
+            });
+            index.set4(url, config.flavors || flavors, config.quality, vals);
           } else if (missing) {
             addTruncate($);
             // console.log($.truncate(elts.find(">"), { length: 50 }));

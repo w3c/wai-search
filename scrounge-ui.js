@@ -150,28 +150,31 @@
 
     // Create data structure for indexing pages.
     function makeIndex () {
-      var vals = {  };
+      var myIndex = {  };
       return {
-       set: function (key, value) {
-          merge(vals, key, value);
+        // set: function (key, values) {
+        set4: function (url, flavors, quality, value) {
+          merge(myIndex, url, flavors, quality, value);
           if (this !== rootIndex)
-            rootIndex.set(key, value);
+            rootIndex.set4(url, flavors, quality, value);
         },
         get: function () {
-          return vals;
+          return myIndex;
         }
       };
 
-      function merge (index, key, values) {
-        if (key in index) {
-          Object.keys(values).forEach(k => {
-            if (k in index[key])
-              index[key][k] = index[key][k].concat(values[k]);
-            else
-              index[key][k] = values[k];
-          });
+      // function merge (index, key, values) {
+      function merge (index, url, flavors, quality, value) {
+        var key = [quality.toString()].concat(flavors).join(",");
+        if (url in index) {
+          if (key in index[url])
+            index[url][key] = index[url][key].concat(value);
+          else
+            index[url][key] = [value];
         } else {
-          index[key] = values;
+          var t = {};
+          t[key] = value;
+          index[url] = t;
         }
       }
     }
@@ -192,37 +195,29 @@
         append(_results);
 
       // Override index.set to paint <li/>s into the UI's INDEX.
-      _oldSet = index.set;
-      index.set = function (key, value) {
-
-        // Encode indexed strings for display.
-        value = Object.keys(value).reduce((ret, k) => {
-          var val = value[k];
-          if (typeof val === "string")
-            // val = val.split(/\s+/);
-            val = [val];
-          ret[k] = val.map(txt => {
-            // TODO: move .replace to valsHTML?
-            return txt.replace(/\s+/g, " ").replace(/</g, "&lt;");
-          });
-          return ret;
-        }, {});
+      _oldSet = index.set4;
+      index.set4 = function (url, flavors, quality, values) {
+        var key = [quality.toString()].concat(flavors).join(",");
 
         // Propagate set call to inherited settter.
-        _oldSet.call(index, key, value);
+        _oldSet.call(index, url, flavors, quality, values);
 
         // Paint index entry in HTML.
-        var valsHTML = Object.keys(value).map(k => {
-          return $("<span/>").
-            append($("<span/>").addClass("key").text(k)).
-            append(" ").
-            append($("<span/>").addClass("value").text(value[k].join(" ")));
-        });
         _results.
           append($("<li/>").addClass("log").
-                 append($("<span/>").addClass(KEY).text(key + ":")).
+                 append($("<span/>").addClass(KEY).text(url)).
                  append(" ").
-                 append($("<pre/>").append(valsHTML)).
+                 append($("<span/>").addClass(KEY).text(quality)).
+                 append(" [").
+                 append($("<span/>").addClass(KEY).text(flavors)).
+                 append("]: ").
+                 append($("<div/>").
+                        addClass(VALUE).
+                        append(values.map(v => {
+                          return $("<span/>").
+                            addClass("region").
+                            text(v);
+                        }))).
                  append("\n") /* for sane view source */);
         _count.text(parseInt(_count.text())+1);
       };
@@ -233,7 +228,9 @@
           append($("<li/>").addClass("fail").
                  append($("<span/>").addClass(KEY).text(heading + ":")).
                  append(" ").
-                 append($($("<pre/>").addClass(VALUE).text(msg))).
+                 append($($("<pre/>").
+                          addClass(VALUE).
+                          text(msg))).
                  append("\n") /* for sane view source */
                 ).closest("li").addClass("fail");
         _count.text(parseInt(_count.text())+1);
@@ -245,7 +242,7 @@
       // Paint <li/> into target's <ul/>.
       var _ul = null;
       function _emit (klass, args) {
-        var toAdd = $("<li/>").append($("<pre/>").append(args.map(elt => {
+        var toAdd = $("<li/>").append($("<div/>").append(args.map(elt => {
           return elt.toString.apply(elt);
         }).join(" ")));
         if (klass)
