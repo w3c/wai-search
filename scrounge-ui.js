@@ -16,6 +16,8 @@
   const DONE = "done";
   const DOING = "doing";
   const RENDERED_RESULT = "block";
+  const LEFT = 50;
+  const RIGHT = 50;
 
 
   // ## Mechanics ##
@@ -24,6 +26,7 @@
   // Throtttling GET speed
   var LastGet = 0;
   var Start = Date.now(); // for differential logging
+  var rootIndex = null;
 
   // Kick everything off with startCrawl.
   $(document).ready(() => {
@@ -104,6 +107,15 @@
         }
       }
     });
+    $("#search").
+      on("blur", renderResults).
+      on("keypress", evt => {
+        if(evt.keyCode == 13) {
+          renderResults(evt);
+          return false;
+        }
+        return true;
+      });
     $("#indexButton").click(() => {
       $("#log").append($("<h2/>").css("display", "inline").text("search index: "));
       var uiTargetList = $("#targetList li").map((idx, li) => {
@@ -113,13 +125,101 @@
       }).get();
       window.Scrounger.startCrawl(getInterface(), uiTargetList);
       $("#clear").prop("disabled", false);
+      $("#search").prop("disabled", false);
     }).prop("disabled", false);
     $("#clear").click(() => {
       $("#log").empty();
       $("#indexButton").attr("class", null).prop("value", "Index");
       $("#clear").prop("disabled", true);
+      $("#search").prop("disabled", true);
     });
   });
+
+  function renderResults (evt) {
+    var idx = rootIndex.get();
+    var search = $("#search").val().toLowerCase();
+
+    var list = Object.keys(idx).reduce((allResults, url) => {
+      return Object.keys(idx[url]).reduce((acc, key) => {
+        var flavors = key.split(/,/);
+        var q = flavors.shift();
+        var ranges = idx[url][key].map(text => {
+          var length = text.length;
+          var i = text.indexOf(search);
+          return i !== -1 ? summarize() : null;
+          function summarize () {
+            var from = i < LEFT ? 0 : i - LEFT;
+            while (from > 0 && text[from] !== " ")
+              from--;
+            var to = i + search.length + RIGHT > text.length ? text.length : i + search.length + RIGHT;
+            while (to < text.length && text[to] !== " ")
+              to++;
+            return text.substr(from, to - from);
+          }
+        });
+        var matches = ranges.filter(range => {
+          return range !== null;
+        });
+        return matches.length > 0 ? acc.concat([{
+          url: url,
+          q: q,
+          flavors: flavors,
+          text: matches[0]
+        }]) : acc;
+      }, allResults);
+    }, []);
+    $("#results").empty().append(
+      list.length > 0 ?
+        list.map(entry => {
+          return $("<li/>").
+            append($("<a/>").
+                   attr("href", entry.url).
+                   addClass(KEY).
+                   text(entry.url)).
+            append(" ").
+            append($("<span/>").
+                   addClass(COUNT).
+                   text(entry.q)).
+            append(" ").
+            append($("<span/>").
+                   addClass(COUNT).
+                   text(entry.flavors)).
+            append(" ").
+            append($("<blockquote/>").
+                   addClass(VALUE).
+                   text(entry.text));
+        }) :
+        $("<span/>").
+        addClass("fail").
+        text("Your search for \"" + search + "\" didn't match anything in the database."));
+    return false;
+    var m;
+
+    // m = search.match(/\[(.*)\]/);
+    // if (m)
+    //   search = m[1];
+    // else
+    //   search = search.replace(/ *\(.*\)/, "");
+    var sz = search.trim().split(/ /).map(s => {
+      var singular = s, plural = s;
+      if (s.endsWith("y"))
+        plural = s.substr(0, s.length-1) + "ies";
+      else if (s.endsWith("ies"))
+        singlular = s.substr(0, s.length-3) + "y";
+      else if (s.endsWith("s"))
+        singular = s.substr(0, s.length-1);
+      else
+        plural = s + "s";
+      return { singular: singular, plural: plural };
+    });
+    var tz = sz.reduce((ret, s) => {
+      return ret.filter(t => {
+        return data.techniques[t].title.match(s.singular) ||
+          data.techniques[t].title.match(s.plural);
+      });
+    }, Object.keys(data.techniques));
+    console.log(tz);
+  }
 
   function stripComments (s) {
     return s.replace(/^\s*\/\/.*$/gm, "");
@@ -129,7 +229,7 @@
   function getInterface () {
     // We will create nested indexes as we recurse through pages and
     // their set calls will update the rootIndex.
-    var rootIndex = makeIndex();
+    rootIndex = makeIndex();
 
     // Create a GET queue.
     var _queue = window.Scrounger.makeQueue(() => {
@@ -152,11 +252,10 @@
     function makeIndex () {
       var myIndex = {  };
       return {
-        // set: function (key, values) {
-        set4: function (url, flavors, quality, value) {
-          merge(myIndex, url, flavors, quality, value);
+        set4: function (url, flavors, quality, values) {
+          merge(myIndex, url, flavors, quality, values);
           if (this !== rootIndex)
-            rootIndex.set4(url, flavors, quality, value);
+            rootIndex.set4(url, flavors, quality, values);
         },
         get: function () {
           return myIndex;
@@ -164,16 +263,16 @@
       };
 
       // function merge (index, key, values) {
-      function merge (index, url, flavors, quality, value) {
+      function merge (index, url, flavors, quality, values) {
         var key = [quality.toString()].concat(flavors).join(",");
         if (url in index) {
           if (key in index[url])
-            index[url][key] = index[url][key].concat(value);
+            index[url][key] = index[url][key].concat(values);
           else
-            index[url][key] = [value];
+            index[url][key] = values;
         } else {
           var t = {};
-          t[key] = value;
+          t[key] = values;
           index[url] = t;
         }
       }
@@ -195,7 +294,7 @@
         append(_results);
 
       // Override index.set to paint <li/>s into the UI's INDEX.
-      _oldSet = index.set4;
+      var _oldSet = index.set4;
       index.set4 = function (url, flavors, quality, values) {
         var key = [quality.toString()].concat(flavors).join(",");
 

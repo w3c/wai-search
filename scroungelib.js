@@ -149,7 +149,7 @@
           return acc.add(parseThenElse(elts.find(find.select), find));
         }, $("create empty selection"));
       }
-      if ("rest" in config) {debugger;
+      if ("rest" in config) {
         return parseThenElse(elts.find(">"), config.rest);
       }
 
@@ -189,7 +189,7 @@
         } else {
           sections.each((_, section) => {
             parseDirectives(iface, $(section), getAbs, url, index, config, flavors, missing);
-            });
+          });
         // } else {
         //   return index.fail("expected next-anchor or follow in", JSON.stringify(config, null, 2));
         }
@@ -221,7 +221,7 @@
             vals = vals.map(val => {
               return val.replace(/(\s+)/g, t => {
                 return t[0];
-              });
+              }).toLowerCase();
             });
             index.set4(url, config.flavors || flavors, config.quality, vals);
           } else if (missing) {

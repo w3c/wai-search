@@ -41,17 +41,32 @@
       }
       p, ol { margin: 0; }
       pre.value { display: flex; }
+      blockquote.value {
+        background-color: #fffff0;
+        margin-top: 0;
+        border: medium solid #eeeee0;
+      }
     </style>
   </head>
   <body>
     <p>Target list:</p>
+    <div style="float:left">
     <ol id="targetList">
       <li class="fail"><h1>script not loaded</h1><h2>check your console for diagnostics</h2></li>
     </ol>
     <input type="button" id="indexButton" value="Index" disabled="disabled" />
     <input type="button" id="clear" value="clear" disabled="disabled"/>
-    <hr/>
-    <div id="log" class="idle"></div>
+    </div>
+    <form id="searchForm" style="float:left">
+      <fieldset>
+        <legend>search box</legend>
+        <label for="search">Search: </label>
+        <input id="search" disabled="disabled"/>
+      </fieldset>
+    </form>
+        <hr style="clear:both;"/>
+<ol id="results"></ol>
+<div id="log" class="idle"></div>
   </body>
 </html>
 
