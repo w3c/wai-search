@@ -7,7 +7,7 @@
   "region": {
     "select": ".video-listing li",
     "follow": {
-      "flavors": ["all", "video"],
+      "flavors": ["video"],
       "region": {
         "select": "#main",
         "find": [
@@ -39,7 +39,7 @@
     "select": "ul.topics li",
     // "then": "slice(0,1)",
     "follow": {
-      "flavors": ["all", "tutorial"],
+      "flavors": ["tutorial"],
       "region": [{
         "select": "ul[aria-labelledby=list-heading-tutorials] li",
         "follow": {
@@ -49,7 +49,7 @@
             { "select": "[role=navigation]"},
             { "select": "h2,h3", "quality": 1}
           ],
-          "rest": { "quality": 0.3, "flavors": ["all", "tutorial", "example"] }
+          "rest": { "quality": 0.3, "flavors": ["tutorial", "example"] }
         }
       }]
     }
@@ -60,7 +60,7 @@
    "region": {
      "select": ".search-region",
      "next-anchor": "[id]",
-     "flavors": ["all", "example"],
+     "flavors": ["example"],
      "find": [
        { "select": "h2", "quality": 1 }
      ],
@@ -77,7 +77,7 @@
       { "select": ">", "attribute": "content", "quality": 1}
     ],
     "follow": {
-      "flavors": ["all", "benefit"],
+      "flavors": ["benefit"],
       "region": {
         "select": "#main",
         "find": [
@@ -126,7 +126,7 @@
       find: function () {
         return jQuery.apply(jQuery, [].slice.call(arguments));
       }
-    }, getAbs, url, index, configRoot, ["all"], undefined);
+    }, getAbs, url, index, configRoot, [], undefined);
   }
 
   function parseDirectives (iface, elts, getAbs, url, index, config, flavors, missing) {
