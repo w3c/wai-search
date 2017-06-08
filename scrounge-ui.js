@@ -140,8 +140,12 @@
 
   function renderResults (evt) {
     var idx = rootIndex.get();
-    var search = $("#search").val().toLowerCase();
+    var search = $("#search").val().trim().toLowerCase();
+    $("#results").empty();
+    if (search.length === 0)
+      return false;
 
+    var knownFlavors = [];
     var list = Object.keys(idx).reduce((allResults, url) => {
       return Object.keys(idx[url]).reduce((acc, key) => {
         // Parse key into quality and flavors.
@@ -150,11 +154,11 @@
 
         // Find all ranges text ranges
         var ranges = idx[url][key].map(text => {
-          var length = text.length;
           var i = text.indexOf(search);
           return i !== -1 ? summarize() : null;
 
           function summarize () {
+            var length = text.length;
             var from = i < LEFT ? 0 : i - LEFT;
             while (from > 0 && text[from] !== " ")
               from--;
@@ -176,6 +180,12 @@
         if (matches.length === 0)
           // We have no matches on this combination of quality and flavors.
           return acc;
+
+        // Add any new flavors.
+        flavors.forEach(flavor => {
+          if (knownFlavors.indexOf(flavor) === -1)
+            knownFlavors.push(flavor);
+        });
 
         // Create a new result.
         var newEntry = {
@@ -203,7 +213,45 @@
 
       }, allResults);
     }, []);
-    $("#results").empty().append(
+    $("#flavors").empty().append(
+      knownFlavors.map(flavor => {
+        return $("<li/>").
+          append(
+            $('<label />', { 'for': 'cb_'+flavor, text: flavor }),
+            $('<input />', { type: 'checkbox', id: 'cb_'+flavor,
+                             value: flavor}).
+              on("click", redraw),
+            "<br/>",
+            $("<button/>", { text: "only" }).
+              on("click", evt => {
+                $("#flavors input").prop('checked', false);
+                $(evt.target).parent().find("input").prop('checked', true);
+                return redraw(evt);
+              })
+          );
+
+        function redraw (evt) {
+          var flavors = $("#flavors input:checked").map((idx, elt) => {
+            return $(elt).val();
+          }).get();
+          if (flavors.length === 0) {
+            $("#results li").show();
+            return false;
+          }
+          $("#results li").each((idx, li) => {
+            var liFlavors = $(li).attr("data-flavors").split(/,/);
+            if (flavors.filter(flavor => {
+              return liFlavors.indexOf(flavor) !== -1;
+            }).length > 0)
+              $(li).show();
+            else
+              $(li).hide();
+          });
+          return true;
+        }
+      })
+    );
+    $("#results").append(
       list.length > 0 ?
         buildResults(list) :
         $("<span/>").addClass("fail").
@@ -228,6 +276,7 @@
                    text(text.trail));
         });
         return $("<li/>").
+          attr("data-flavors", entry.flavors.join(",")).
           append($("<a/>").
                  attr("href", entry.url).
                  addClass(KEY).

@@ -34,7 +34,7 @@
           padding-right: .5em;
       }
 
-      .addTarget, .removeTarget {
+      .addTarget, .removeTarget, #flavors button {
           font-size: 80%;
           line-height: 1ex;
           font-family: monospace;
@@ -48,11 +48,16 @@
       }
       .lead, .trail {  }
       .match { font-weight: bold }
+      #flavors { display: flex; margin-top: 0; }
+      #flavors li {
+        list-style-type: none;
+        padding-right: 2em;
+      }
     </style>
   </head>
   <body>
     <p>Target list:</p>
-    <div style="float:left">
+    <div style="float:left; width: 50%;">
     <ol id="targetList">
       <li class="fail"><h1>script not loaded</h1><h2>check your console for diagnostics</h2></li>
     </ol>
@@ -67,6 +72,7 @@
       </fieldset>
     </form>
         <hr style="clear:both;"/>
+<ul id="flavors"></ul>
 <ol id="results"></ol>
 <div id="log" class="idle"></div>
   </body>
