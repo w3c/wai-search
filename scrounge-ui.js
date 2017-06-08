@@ -13,6 +13,9 @@
   const INDEX = "index";
   const KEY = "key";
   const VALUE = "value";
+  const LEAD = "lead";
+  const MATCH = "match";
+  const TRAIL = "trail";
   const DONE = "done";
   const DOING = "doing";
   const RENDERED_RESULT = "block";
@@ -141,12 +144,16 @@
 
     var list = Object.keys(idx).reduce((allResults, url) => {
       return Object.keys(idx[url]).reduce((acc, key) => {
+        // Parse key into quality and flavors.
         var flavors = key.split(/,/);
         var q = flavors.shift();
+
+        // Find all ranges text ranges
         var ranges = idx[url][key].map(text => {
           var length = text.length;
           var i = text.indexOf(search);
           return i !== -1 ? summarize() : null;
+
           function summarize () {
             var from = i < LEFT ? 0 : i - LEFT;
             while (from > 0 && text[from] !== " ")
@@ -154,12 +161,18 @@
             var to = i + search.length + RIGHT > text.length ? text.length : i + search.length + RIGHT;
             while (to < text.length && text[to] !== " ")
               to++;
-            return text.substr(from, to - from);
+            return {
+              lead: text.substr(from, i - from),
+              match: text.substr(i, search.length),
+              trail: text.substr(i + search.length, to - from)
+            };
           }
         });
+
         var matches = ranges.filter(range => {
           return range !== null;
         });
+
         return matches.length > 0 ? acc.concat([{
           url: url,
           q: q,
@@ -187,7 +200,15 @@
             append(" ").
             append($("<blockquote/>").
                    addClass(VALUE).
-                   text(entry.text));
+                   append($("<span/>").
+                          addClass(LEAD).
+                          text(entry.text.lead)).
+                   append($("<span/>").
+                          addClass(MATCH).
+                          text(entry.text.match)).
+                   append($("<span/>").
+                          addClass(TRAIL).
+                          text(entry.text.trail)));
         }) :
         $("<span/>").
         addClass("fail").
