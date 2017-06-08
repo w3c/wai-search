@@ -161,11 +161,11 @@
             var to = i + search.length + RIGHT > text.length ? text.length : i + search.length + RIGHT;
             while (to < text.length && text[to] !== " ")
               to++;
-            return {
+            return [{
               lead: text.substr(from, i - from),
               match: text.substr(i, search.length),
               trail: text.substr(i + search.length, to - from)
-            };
+            }];
           }
         });
 
@@ -173,47 +173,77 @@
           return range !== null;
         });
 
-        return matches.length > 0 ? acc.concat([{
+        if (matches.length === 0)
+          // We have no matches on this combination of quality and flavors.
+          return acc;
+
+        // Create a new result.
+        var newEntry = {
           url: url,
           q: q,
           flavors: flavors,
           text: matches[0]
-        }]) : acc;
+        };
+
+        // Sort new result into acc.
+        for (var accI = 0; accI < acc.length; ++accI) {
+          var cur = acc[accI];
+          if (cur.url === url) {
+            if (cur.q < q)
+              // Replace lower-quality result with new result.
+              acc[accI] = newEntry;
+            return acc;
+          } else if (cur.q < q) {
+            acc.splice(accI, 0, newEntry);
+            return acc;
+          }
+        }
+        // Sort in at bottom, i.e. append new result.
+        return acc.concat(newEntry);
+
       }, allResults);
     }, []);
     $("#results").empty().append(
       list.length > 0 ?
-        list.map(entry => {
-          return $("<li/>").
-            append($("<a/>").
-                   attr("href", entry.url).
-                   addClass(KEY).
-                   text(entry.url)).
-            append(" ").
-            append($("<span/>").
-                   addClass(COUNT).
-                   text(entry.q)).
-            append(" ").
-            append($("<span/>").
-                   addClass(COUNT).
-                   text(entry.flavors)).
-            append(" ").
-            append($("<blockquote/>").
-                   addClass(VALUE).
-                   append($("<span/>").
-                          addClass(LEAD).
-                          text(entry.text.lead)).
-                   append($("<span/>").
-                          addClass(MATCH).
-                          text(entry.text.match)).
-                   append($("<span/>").
-                          addClass(TRAIL).
-                          text(entry.text.trail)));
-        }) :
-        $("<span/>").
-        addClass("fail").
+        buildResults(list) :
+        $("<span/>").addClass("fail").
         text("Your search for \"" + search + "\" didn't match anything in the database."));
     return false;
+
+    function buildResults (list) {
+      return list.map(entry => {
+        var blockquote =
+            $("<blockquote/>").
+            addClass(VALUE);
+        entry.text.forEach(text => {
+          blockquote.
+            append($("<span/>").
+                   addClass(LEAD).
+                   text(text.lead)).
+            append($("<span/>").
+                   addClass(MATCH).
+                   text(text.match)).
+            append($("<span/>").
+                   addClass(TRAIL).
+                   text(text.trail));
+        });
+        return $("<li/>").
+          append($("<a/>").
+                 attr("href", entry.url).
+                 addClass(KEY).
+                 text(entry.url)).
+          append(" ").
+          append($("<span/>").
+                 addClass(COUNT).
+                 text(entry.q)).
+          append(" ").
+          append($("<span/>").
+                 addClass(COUNT).
+                 text(entry.flavors)).
+          append(" ").
+          append(blockquote);
+      })    }
+
     var m;
 
     // m = search.match(/\[(.*)\]/);
