@@ -236,7 +236,7 @@
           }).get();
           if (flavors.length === 0) {
             $("#results li").show();
-            return false;
+            return true;
           }
           $("#results li").each((idx, li) => {
             var liFlavors = $(li).attr("data-flavors").split(/,/);
