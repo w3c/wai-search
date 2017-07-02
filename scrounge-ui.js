@@ -5,7 +5,7 @@
 
   // ## User configuration ##
   // How much to throttle repeated GETs to avoid getting blacklisted on w3.org:
-  const DELAY = 250; // Set to 0 when running on localhost.
+  const DELAY = 0; // Set to 0 when running on localhost.
   const LOG_TO_CONSOLE = false; // mirror logged message to the console.
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
@@ -13,6 +13,7 @@
   const INDEX = "index";
   const KEY = "key";
   const VALUE = "value";
+  const SKIP = "skip";
   const LEAD = "lead";
   const MATCH = "match";
   const TRAIL = "trail";
@@ -111,10 +112,10 @@
       }
     });
     $("#search").
-      on("blur", renderResults).
+      on("blur", performSearch).
       on("keypress", evt => {
         if(evt.keyCode == 13) {
-          renderResults(evt);
+          performSearch(evt);
           return false;
         }
         return true;
@@ -138,80 +139,87 @@
     });
   });
 
-  function renderResults (evt) {
+  function performSearch (evt) {
     var idx = rootIndex.get();
     var search = $("#search").val().trim().toLowerCase();
     $("#results").empty();
     if (search.length === 0)
       return false;
 
+    var searchers = getSearchers(search);
     var knownFlavors = [];
+    // For every url in the index...
     var list = Object.keys(idx).reduce((allResults, url) => {
-      return Object.keys(idx[url]).reduce((acc, key) => {
+      // ... and every key like ".9,flavor1,flavor2"
+      var bestForUrl = Object.keys(idx[url]).reduce((bestForUrl, key) => {
         // Parse key into quality and flavors.
         var flavors = key.split(/,/);
         var q = flavors.shift();
 
-        // Find all ranges text ranges
-        var ranges = idx[url][key].map(text => {
-          var i = text.indexOf(search);
-          return i !== -1 ? summarize() : null;
+        // For this URL and key, find the best match in all of it's text ranges.
+        var match = idx[url][key].reduce((match, text) => {
+          var matches = searchers.reduce((matches, s) => {
+            return matches.concat([s.search(text)]);
+          }, []);
+          limitMatches(matches, 1000000); // non-functional
 
-          function summarize () {
-            var length = text.length;
-            var from = i < LEFT ? 0 : i - LEFT;
-            while (from > 0 && text[from] !== " ")
-              from--;
-            var to = i + search.length + RIGHT > text.length ? text.length : i + search.length + RIGHT;
-            while (to < text.length && text[to] !== " ")
-              to++;
-            return [{
-              lead: text.substr(from, i - from),
-              match: text.substr(i, search.length),
-              trail: text.substr(i + search.length, to - from)
-            }];
+          // Find the best clustering for the search matches in this text.
+          var xp = crossProduct(matches);
+          var bestIndexes = null, bestClustering = 0;
+          while (xp.next()) {
+            var selections = xp.get();
+            var clustering = getClustering(selections);
+            if (clustering > bestClustering) {
+              bestClustering = clustering;
+              bestIndexes = selections.slice();
+            }
           }
-        });
 
-        var matches = ranges.filter(range => {
-          return range !== null;
-        });
+          return bestIndexes === null || bestClustering <= match.cluster ?
+            match :
+            {
+              cluster: bestClustering,
+              summary: summarize(bestIndexes, text, searchers)
+            }
+        }, {cluster: 0, summary: null});
 
-        if (matches.length === 0)
+        if (match.summary === null)
           // We have no matches on this combination of quality and flavors.
-          return acc;
+          return bestForUrl;
 
-        // Add any new flavors.
-        flavors.forEach(flavor => {
-          if (knownFlavors.indexOf(flavor) === -1)
-            knownFlavors.push(flavor);
-        });
+        var valuation = q * match.cluster;
 
         // Create a new result.
         var newEntry = {
           url: url,
           q: q,
           flavors: flavors,
-          text: matches[0]
+          text: match,
+          valuation: valuation
         };
+        return bestForUrl === null || valuation > bestForUrl.valuation ?
+          newEntry :
+          bestForUrl;
+      }, null);
+      if (bestForUrl === null)
+        return allResults;
 
-        // Sort new result into acc.
-        for (var accI = 0; accI < acc.length; ++accI) {
-          var cur = acc[accI];
-          if (cur.url === url) {
-            if (cur.q < q)
-              // Replace lower-quality result with new result.
-              acc[accI] = newEntry;
-            return acc;
-          } else if (cur.q < q) {
-            acc.splice(accI, 0, newEntry);
-            return acc;
-          }
+      // Add any new flavors from this match.
+      bestForUrl.flavors.forEach(flavor => {
+        if (knownFlavors.indexOf(flavor) === -1)
+          knownFlavors.push(flavor);
+      });
+
+      // Sort new result into allResults.
+      for (var allResultsI = 0; allResultsI < allResults.length; ++allResultsI) {
+        var cur = allResults[allResultsI];
+        if (cur.valuation < bestForUrl.valuation) {
+          allResults.splice(allResultsI, 0, bestForUrl);
+          return allResults;
         }
-        // Sort in at bottom, i.e. append new result.
-        return acc.concat(newEntry);
-
-      }, allResults);
+      }
+      // Sort in at bottom, i.e. append new result.
+      return allResults.concat(bestForUrl);
     }, []);
     $("#flavors").empty().append(
       knownFlavors.map(flavor => {
@@ -229,26 +237,6 @@
                 return redraw(evt);
               })
           );
-
-        function redraw (evt) {
-          var flavors = $("#flavors input:checked").map((idx, elt) => {
-            return $(elt).val();
-          }).get();
-          if (flavors.length === 0) {
-            $("#results li").show();
-            return true;
-          }
-          $("#results li").each((idx, li) => {
-            var liFlavors = $(li).attr("data-flavors").split(/,/);
-            if (flavors.filter(flavor => {
-              return liFlavors.indexOf(flavor) !== -1;
-            }).length > 0)
-              $(li).show();
-            else
-              $(li).hide();
-          });
-          return true;
-        }
       })
     );
     $("#results").append(
@@ -258,49 +246,71 @@
         text("Your search for \"" + search + "\" didn't match anything in the database."));
     return false;
 
-    function buildResults (list) {
-      return list.map(entry => {
-        var blockquote =
-            $("<blockquote/>").
-            addClass(VALUE);
-        entry.text.forEach(text => {
-          blockquote.
-            append($("<span/>").
-                   addClass(LEAD).
-                   text(text.lead)).
-            append($("<span/>").
-                   addClass(MATCH).
-                   text(text.match)).
-            append($("<span/>").
-                   addClass(TRAIL).
-                   text(text.trail));
-        });
-        return $("<li/>").
-          attr("data-flavors", entry.flavors.join(",")).
-          append($("<a/>").
-                 attr("href", entry.url).
-                 addClass(KEY).
-                 text(entry.url)).
-          append(" ").
-          append($("<span/>").
-                 addClass(COUNT).
-                 text(entry.q)).
-          append(" ").
-          append($("<span/>").
-                 addClass(COUNT).
-                 text(entry.flavors)).
-          append(" ").
-          append(blockquote);
-      })    }
+  }
 
-    var m;
+  function redraw (evt) {
+    var flavors = $("#flavors input:checked").map((idx, elt) => {
+      return $(elt).val();
+    }).get();
+    if (flavors.length === 0) {
+      $("#results li").show();
+      return true;
+    }
+    $("#results li").each((idx, li) => {
+      var liFlavors = $(li).attr("data-flavors").split(/,/);
+      if (flavors.filter(flavor => {
+        return liFlavors.indexOf(flavor) !== -1;
+      }).length > 0)
+        $(li).show();
+      else
+        $(li).hide();
+    });
+    return true;
+  }
 
-    // m = search.match(/\[(.*)\]/);
-    // if (m)
-    //   search = m[1];
-    // else
-    //   search = search.replace(/ *\(.*\)/, "");
-    var sz = search.trim().split(/ /).map(s => {
+  function buildResults (list) {
+    return list.map(entry => {
+      var blockquote =
+          $("<blockquote/>").
+          addClass(VALUE);
+      entry.text.summary.forEach(text => {
+        blockquote.
+          append(text.gap ?
+                $("<span/>").
+                 addClass(SKIP).
+                 text("…") :
+                "").
+          append($("<span/>").
+                 addClass(LEAD).
+                 text(text.lead)).
+          append($("<span/>").
+                 addClass(MATCH).
+                 text(text.match)).
+          append($("<span/>").
+                 addClass(TRAIL).
+                 text(text.trail));
+      });
+      return $("<li/>").
+        attr("data-flavors", entry.flavors.join(",")).
+        append($("<a/>").
+               attr("href", entry.url).
+               addClass(KEY).
+               text(entry.url)).
+        append(" ").
+        append($("<span/>").
+               addClass(COUNT).
+               text(entry.q)).
+        append(" ").
+        append($("<span/>").
+               addClass(COUNT).
+               text(entry.flavors)).
+        append(" ").
+        append(blockquote);
+    })
+  }
+
+  function getSearchers (searchString) {
+    return searchString.trim().split(/ /).map(s => {
       var singular = s, plural = s;
       if (s.endsWith("y"))
         plural = s.substr(0, s.length-1) + "ies";
@@ -310,15 +320,140 @@
         singular = s.substr(0, s.length-1);
       else
         plural = s + "s";
-      return { singular: singular, plural: plural };
+
+      return {
+        goal: s,
+        search: (text) => {
+          return [singular, plural].reduce((terms, term) => {
+            var indexes = indexesOf(text, term);
+            return indexes.length > 0 ?
+              terms.concat(indexes.map(i => { return { term: term, index: i }; })) :
+            terms;
+          }, [])
+        },
+      };
     });
-    var tz = sz.reduce((ret, s) => {
-      return ret.filter(t => {
-        return data.techniques[t].title.match(s.singular) ||
-          data.techniques[t].title.match(s.plural);
-      });
-    }, Object.keys(data.techniques));
-    console.log(tz);
+  }
+
+  function summarize (indexes, text, searchers) {
+    var missed = indexes.reduce((missed, m, idx) => {
+      return !m ? missed.concat(searchers[idx].goal) : missed;
+    }, []);
+    var sorted = indexes.filter(m => {
+      return !!m;
+    }).sort((l, r) => {
+      return cmp(l.index, r.index);
+    });
+    var length = text.length;
+    var to = null; // where we got to in previous iterations
+    var last = null; // need to update last.trail when there's an overlap.
+    return sorted.map((m, mNo) => {
+      var from = m.index < LEFT ? 0 : m.index - LEFT;
+      while (from > 0 && text[from-1] !== " ")
+        from--;
+      var gap;
+      if (to === null) {
+        gap = false;
+      } else if (from === to) {
+        gap = false;
+      } else if (from < to) {
+        gap = false;
+        from = m.index;
+        // Make the last.trail end at m.index.
+        var lastM = sorted[mNo - 1];
+        last.trail = text.substr(lastM.index + lastM.term.length,
+                                 m.index - lastM.index - lastM.term.length);
+      } else {
+        gap = true;
+      }
+
+      to = m.index + m.term.length + RIGHT > text.length ?
+          text.length :
+          m.index + m.term.length + RIGHT;
+      while (to < text.length && text[to] !== " ")
+        to++;
+
+      last = {
+        gap: gap,
+        lead: text.substr(from, m.index - from),
+        match: text.substr(m.index, m.term.length),
+        // trail: text.substr(m.index + m.term.length, to - from)
+        trail: text.substr(m.index + m.term.length, to - m.index - m.term.length)
+      };
+      return last;
+    });
+  }
+
+  /** cmp = handy sort predicate from perl
+   */
+  function cmp (l, r) {
+    return l < r ? -1 : l > r ? 1 : 0;
+  }
+
+  /** limitMatches - limit the cross product of matches to limit permutations.
+   * If the product is over limit, halve the longest member of matches and try again.
+   */
+  function limitMatches (matches, limit) {
+    var product = matches.reduce((product, m) => {
+      return m.length === 0 ? product : m.length * product;
+    }, 1);
+    while (product > limit) {
+//      console.log("" + product + "=" + matches.map(m => { return m.length; }).join("×"));
+      var largest = matches.reduce((largest, m) => {
+        return m.length > largest.length ? m : largest;
+      }, []);
+      largest = largest.splice(largest.length / 2);
+      product = matches.reduce((product, m) => {
+        return m.length === 0 ? product : m.length * product;
+      }, 1)
+    }
+//    console.log("" + product + "=" + matches.map(m => { return m.length; }).join("×"));
+  }
+
+  function getClustering (indexes) {
+    var sorted = indexes.filter(m => {
+      return !!m;
+    }).sort((l, r) => {
+      return cmp(l.index, r.index);
+    });
+    if (sorted.length === 1)
+      return 1;
+    var ret = 0;
+    for (var i = 1; i < sorted.length; ++i)
+      ret += 1/(sorted[i].index - sorted[i-1].index);
+    return ret/sorted.length; // range 0-1
+  }
+
+  function getClustering999 (vz) {
+    var range = vz.reduce((acc, v) => {
+      return v ? {
+        v: acc.v + v.index,
+        i: acc.i + 1,
+        n: acc.n
+      } : {
+        v: acc.v,
+        i: acc.i,
+        n: acc.n + 1
+      };
+    }, {v: 0, i: 0, n: 0});
+    if (range.i === 0)
+      return 0;
+    var mean = range.v/range.i;
+    return vz.reduce((ret, v) => {
+      return v ? ret + 1/(v.index - mean + 1) : ret;
+    }, 0);
+  }
+
+  function indexesOf (text, s) {
+    var ret = [];
+    for (var i = 0; ; ) {
+      var t = text.indexOf(s, i);
+      if (t === -1)
+        break;
+      ret.push(t);
+      i = t + 1;
+    }
+    return ret;
   }
 
   function stripComments (s) {
@@ -573,4 +708,59 @@
       }
     }
   }
+
+  // based on
+  // http://stackoverflow.com/questions/9422386/lazy-cartesian-product-of-arrays-arbitrary-nested-loops
+  function crossProduct(sets) {
+    var n = sets.length, carets = [], args = null;
+
+    function init() {
+      args = [];
+      for (var i = 0; i < n; i++) {
+        carets[i] = 0;
+        args[i] = sets[i][0];
+      }
+    }
+
+    function next() {
+
+      // special case: crossProduct([]).next().next() returns false.
+      if (args !== null && args.length === 0)
+        return false;
+
+      if (args === null) {
+        init();
+        return true;
+      }
+      var i = n - 1;
+      carets[i]++;
+      if (carets[i] < sets[i].length) {
+        args[i] = sets[i][carets[i]];
+        return true;
+      }
+      while (carets[i] >= sets[i].length) {
+        if (i == 0) {
+          return false;
+        }
+        carets[i] = 0;
+        args[i] = sets[i][0];
+        carets[--i]++;
+      }
+      args[i] = sets[i][carets[i]];
+      return true;
+    }
+
+    return {
+      next: next,
+      do: function (block, _context) { // old API
+        return block.apply(_context, args);
+      },
+      // new API because
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/arguments#Description
+      // cautions about functions over arguments.
+      get: function () { return args; }
+    };
+  }
+
+
 })();
