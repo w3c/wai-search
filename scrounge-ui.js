@@ -187,7 +187,8 @@
           // We have no matches on this combination of quality and flavors.
           return bestForUrl;
 
-        var valuation = q * match.cluster;
+        var valuation = (parseFloat(q) + 1000*match.cluster)/1001;
+        console.log(q, match.cluster, valuation);
 
         // Create a new result.
         var newEntry = {
@@ -299,7 +300,7 @@
         append(" ").
         append($("<span/>").
                addClass(COUNT).
-               text(entry.q)).
+               text(entry.q + "·" + entry.text.cluster + "⇒" + entry.valuation)).
         append(" ").
         append($("<span/>").
                addClass(COUNT).
@@ -411,17 +412,19 @@
   }
 
   function getClustering (indexes) {
+    // 1/4 -> .25, 2/4 -> .25 + .25clusterQ, 3/4 -> .5 + .25clusterQ, 4/4 -> .75 + .25clusterQ
     var sorted = indexes.filter(m => {
       return !!m;
     }).sort((l, r) => {
       return cmp(l.index, r.index);
     });
     if (sorted.length === 1)
-      return 1;
-    var ret = 0;
+      return 1/indexes.length;
+    var step = 1 / indexes.length;
+    var clusterQ = 0;
     for (var i = 1; i < sorted.length; ++i)
-      ret += 1/(sorted[i].index - sorted[i-1].index);
-    return ret/sorted.length; // range 0-1
+      clusterQ += 1/(sorted[i].index - sorted[i-1].index);
+    return (sorted.length - 1) * step + clusterQ * step;
   }
 
   function getClustering999 (vz) {
