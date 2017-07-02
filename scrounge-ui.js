@@ -5,8 +5,10 @@
 
   // ## User configuration ##
   // How much to throttle repeated GETs to avoid getting blacklisted on w3.org:
-  const DELAY = 0; // Set to 0 when running on localhost.
+  const DELAY = 0; // Set to 0 to run unthrottled.
   const LOG_TO_CONSOLE = false; // mirror logged message to the console.
+  const MATCHQ = 256; // nth word match is MATCHQ × more important than q.
+
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
   const LENGTH = "length";
@@ -20,6 +22,8 @@
   const DONE = "done";
   const DOING = "doing";
   const RENDERED_RESULT = "block";
+
+  // How much contextual text to include in results:
   const LEFT = 50;
   const RIGHT = 50;
 
@@ -152,55 +156,11 @@
     var list = Object.keys(idx).reduce((allResults, url) => {
       // ... and every key like ".9,flavor1,flavor2"
       var bestForUrl = Object.keys(idx[url]).reduce((bestForUrl, key) => {
-        // Parse key into quality and flavors.
-        var flavors = key.split(/,/);
-        var q = flavors.shift();
-
         // For this URL and key, find the best match in all of it's text ranges.
-        var match = idx[url][key].reduce((match, text) => {
-          var matches = searchers.reduce((matches, s) => {
-            return matches.concat([s.search(text)]);
-          }, []);
-          limitMatches(matches, 1000000); // non-functional
-
-          // Find the best clustering for the search matches in this text.
-          var xp = crossProduct(matches);
-          var bestIndexes = null, bestClustering = 0;
-          while (xp.next()) {
-            var selections = xp.get();
-            var clustering = getClustering(selections);
-            if (clustering > bestClustering) {
-              bestClustering = clustering;
-              bestIndexes = selections.slice();
-            }
-          }
-
-          return bestIndexes === null || bestClustering <= match.cluster ?
-            match :
-            {
-              cluster: bestClustering,
-              summary: summarize(bestIndexes, text, searchers)
-            }
-        }, {cluster: 0, summary: null});
-
-        if (match.summary === null)
-          // We have no matches on this combination of quality and flavors.
-          return bestForUrl;
-
-        var valuation = (parseFloat(q) + 1000*match.cluster)/1001;
-        console.log(q, match.cluster, valuation);
-
-        // Create a new result.
-        var newEntry = {
-          url: url,
-          q: q,
-          flavors: flavors,
-          text: match,
-          valuation: valuation
-        };
-        return bestForUrl === null || valuation > bestForUrl.valuation ?
-          newEntry :
-          bestForUrl;
+        var forThisKey = bestMatchForTextArray(key, idx[url][key], searchers);
+        return bestForUrl === null ? forThisKey :
+          forThisKey === null || forThisKey.valuation > bestForUrl.valuation ? bestForUrl :
+          forThisKey;
       }, null);
       if (bestForUrl === null)
         return allResults;
@@ -310,6 +270,7 @@
     })
   }
 
+  // Parse searchString into a list of words to search for.
   function getSearchers (searchString) {
     return searchString.trim().split(/ /).map(s => {
       var singular = s, plural = s;
@@ -336,6 +297,62 @@
     });
   }
 
+  // For a sequence of strings, e.g. ["mississippi", "is", "pi"],
+  // find the most clustered index for search text, e.g. ["s", "i", "p"]
+  function bestMatchForTextArray (key, textArray, searchers) {
+    var match = textArray.reduce((match, text) => {
+      var m = bestMatchForText(text, searchers);
+      return m === null || m.cluster <= match.cluster ? match : m;
+    }, {cluster: 0, summary: null});
+    if (match.summary === null)
+      // We have no matches on this combination of quality and flavors.
+      return null;
+
+    // Parse key into quality and flavors.
+    var flavors = key.split(/,/);
+    var q = flavors.shift();
+    var valuation = (parseFloat(q) + MATCHQ*match.cluster)/(MATCHQ + 1);
+    console.log(q, match.cluster, valuation);
+
+    // Create a new result.
+    return {
+      url: url,
+      q: q,
+      flavors: flavors,
+      text: match,
+      valuation: valuation
+    };
+  }
+
+  // For a given sequence of text e.g. "mississippi",
+  // find the most clustered indexes for searchers, e.g. ["s", "i", "p"]
+  function bestMatchForText (text, searchers) {
+    var matches = searchers.reduce((matches, s) => {
+      return matches.concat([s.search(text)]);
+    }, []);
+    limitMatches(matches, 10000); // (non-functional) trim cross-product space.
+
+    // Find the best clustering for the search matches in this text.
+    var xp = crossProduct(matches);
+    var bestIndexes = null, bestClustering = 0;
+    while (xp.next()) {
+      var selections = xp.get();
+      var clustering = getClustering(selections);
+      if (clustering > bestClustering) {
+        bestClustering = clustering;
+        bestIndexes = selections.slice();
+      }
+    }
+
+    return bestIndexes === null ?
+      null :
+      {
+        cluster: bestClustering,
+        summary: summarize(bestIndexes, text, searchers)
+      }
+  }
+
+  // Capture the strings matched by searchers over text.
   function summarize (indexes, text, searchers) {
     var missed = indexes.reduce((missed, m, idx) => {
       return !m ? missed.concat(searchers[idx].goal) : missed;
@@ -352,6 +369,7 @@
       var from = m.index < LEFT ? 0 : m.index - LEFT;
       while (from > 0 && text[from-1] !== " ")
         from--;
+
       var gap;
       if (to === null) {
         gap = false;
@@ -378,7 +396,6 @@
         gap: gap,
         lead: text.substr(from, m.index - from),
         match: text.substr(m.index, m.term.length),
-        // trail: text.substr(m.index + m.term.length, to - from)
         trail: text.substr(m.index + m.term.length, to - m.index - m.term.length)
       };
       return last;
@@ -399,7 +416,7 @@
       return m.length === 0 ? product : m.length * product;
     }, 1);
     while (product > limit) {
-//      console.log("" + product + "=" + matches.map(m => { return m.length; }).join("×"));
+      // console.log("" + product + "=" + matches.map(m => { return m.length; }).join("×"));
       var largest = matches.reduce((largest, m) => {
         return m.length > largest.length ? m : largest;
       }, []);
@@ -408,9 +425,12 @@
         return m.length === 0 ? product : m.length * product;
       }, 1)
     }
-//    console.log("" + product + "=" + matches.map(m => { return m.length; }).join("×"));
+    // console.log("" + product + "=" + matches.map(m => { return m.length; }).join("×"));
   }
 
+  // Given an array of indexes [{index: 2}, {index: 5}, {index: 9}],
+  // Calculate a clustering coefficient < 1 which is closer to one for a highly
+  // clustered array e.g. [{index: 1}, {index: 2}, {index: 3}]
   function getClustering (indexes) {
     // 1/4 -> .25, 2/4 -> .25 + .25clusterQ, 3/4 -> .5 + .25clusterQ, 4/4 -> .75 + .25clusterQ
     var sorted = indexes.filter(m => {
@@ -427,26 +447,8 @@
     return (sorted.length - 1) * step + clusterQ * step;
   }
 
-  function getClustering999 (vz) {
-    var range = vz.reduce((acc, v) => {
-      return v ? {
-        v: acc.v + v.index,
-        i: acc.i + 1,
-        n: acc.n
-      } : {
-        v: acc.v,
-        i: acc.i,
-        n: acc.n + 1
-      };
-    }, {v: 0, i: 0, n: 0});
-    if (range.i === 0)
-      return 0;
-    var mean = range.v/range.i;
-    return vz.reduce((ret, v) => {
-      return v ? ret + 1/(v.index - mean + 1) : ret;
-    }, 0);
-  }
-
+  // all indexs of text in s.
+  // ("ab", "abcabc") => [0, 3]
   function indexesOf (text, s) {
     var ret = [];
     for (var i = 0; ; ) {
@@ -459,6 +461,7 @@
     return ret;
   }
 
+  // Strip javascript-style (//) comments
   function stripComments (s) {
     return s.replace(/^\s*\/\/.*$/gm, "");
   }
