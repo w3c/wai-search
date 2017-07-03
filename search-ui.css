@@ -16,7 +16,7 @@
 #search-results .lead, .trail {  }
 #search-results .match { font-weight: bold }
 #search-results li { margin-bottom: 2ex; }
-#search-results blockquote.value {
+#search-results blockquote {
     background-color: #fffff0;
     margin-top: 0; margin-bottom: 0;
     border: medium solid #eeeee0;
