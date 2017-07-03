@@ -14,6 +14,10 @@
 
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
+  const VALUATION = "valuation";
+  const FLAVORS = "flavors";
+  const URL = "url";
+  const TITLE = "title";
   const LENGTH = "length";
   const INDEX = "index";
   const KEY = "key";
@@ -158,9 +162,9 @@
     // For every url in the index...
     var list = Object.keys(idx).reduce((allResults, url) => {
       // ... and every key like ".9,flavor1,flavor2"
-      var bestForUrl = Object.keys(idx[url]).reduce((bestForUrl, key) => {
+      var bestForUrl = Object.keys(idx[url].flavors).reduce((bestForUrl, key) => {
         // For this URL and key, find the best match in all of it's text ranges.
-        var forThisKey = bestMatchForTextArray(key, idx[url][key], searchers);
+        var forThisKey = bestMatchForTextArray(key, idx[url].flavors[key], searchers);
         return bestForUrl === null ? forThisKey :
           forThisKey === null || forThisKey.valuation > bestForUrl.valuation ? bestForUrl :
           forThisKey;
@@ -168,6 +172,7 @@
       if (bestForUrl === null)
         return allResults;
       bestForUrl.url = url;
+      bestForUrl.title = idx[url].title;
 
       // Add any new flavors from this match.
       bestForUrl.flavors.forEach(flavor => {
@@ -241,10 +246,10 @@
       entry.text.summary.forEach(text => {
         blockquote.
           append(text.gap ?
-                $("<span/>").
+                 $("<span/>").
                  addClass(SKIP).
                  text("…") :
-                "").
+                 "").
           append($("<span/>").
                  addClass(LEAD).
                  text(text.lead)).
@@ -257,20 +262,25 @@
       });
       return $("<li/>").
         attr("data-flavors", entry.flavors.join(",")).
-        append($("<a/>").
-               attr("href", entry.url).
-               addClass(KEY).
-               text(entry.url)).
+        append($("<h2/>").
+               addClass(TITLE).
+               append($("<a/>").
+                      attr("href", entry.url).
+                      text(entry.title.trim()))).
         append(" ").
         append($("<span/>").
-               addClass(COUNT).
+               addClass(VALUATION).
                text(entry.q + "·" + entry.text.cluster + "⇒" + entry.valuation)).
         append(" ").
         append($("<span/>").
-               addClass(COUNT).
+               addClass(FLAVORS).
                text(entry.flavors)).
         append(" ").
-        append(blockquote);
+        append(blockquote).
+        append($("<a/>").
+               attr("href", entry.url).
+               addClass(URL).
+               text(entry.url));
     })
   }
 
@@ -316,7 +326,7 @@
     var flavors = key.split(/,/);
     var q = flavors.shift();
     var valuation = (parseFloat(q) + MATCHQ*match.cluster)/(MATCHQ + 1);
-    console.log(q, match.cluster, valuation);
+    // console.log(q, match.cluster, valuation);
 
     // Create a new result.
     return {
@@ -477,8 +487,11 @@
 
     // Create a GET queue.
     var _queue = window.Scrounger.makeQueue(() => {
+      // done() callback: update classes
+      console.log("done indexing");
       $("#indexButton").attr("class", DONE).prop("value", "Indexed");
       $("#log").removeClass("doing").addClass("done").append("<hr/>");
+      console.log(rootIndex.get());
     });
 
     // Update the index button.
@@ -501,6 +514,13 @@
           if (this !== rootIndex)
             rootIndex.set4(url, flavors, quality, values);
         },
+        setTitle: function (url, title) {
+          if (!(url in myIndex))
+            myIndex[url] = {title: null, flavors: {}};
+          myIndex[url].title = title;
+          if (this !== rootIndex)
+            rootIndex.setTitle(url, title);
+        },
         get: function () {
           return myIndex;
         }
@@ -510,13 +530,13 @@
       function merge (index, url, flavors, quality, values) {
         var key = [quality.toString()].concat(flavors).join(",");
         if (url in index) {
-          if (key in index[url])
-            index[url][key] = index[url][key].concat(values);
+          if (key in index[url].flavors)
+            index[url].flavors[key] = index[url].flavors[key].concat(values);
           else
-            index[url][key] = values;
+            index[url].flavors[key] = values;
         } else {
-          var t = {};
-          t[key] = values;
+          var t = {title: null, flavors: {}};
+          t.flavors[key] = values;
           index[url] = t;
         }
       }
