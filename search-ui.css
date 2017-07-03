@@ -8,7 +8,7 @@
     line-height: 1ex;
     font-family: monospace;
 }
-#search-results h2.title { display: inline; font-size: 1em; }
+#search-results h2.title { display: inline; font-size: 1.2em; }
 #search-results .valuation { display: none; color: green; }
 #search-results .flavors { /* display: none; */ color: teal; }
 #search-results .url { font-size: smaller }

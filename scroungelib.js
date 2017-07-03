@@ -1,12 +1,13 @@
 (function () {
   // var Site = "https://www.w3.org/";
-  // var Site = "http://90.9.146.48/";
+  // var Site = "http://90.4.174.205/";
   var Site = "http://localhost/";
 
   var perspectivesRules = `{
   "region": {
     "select": ".video-listing li",
     "follow": {
+      // "then": "slice(1,2)",
       "flavors": ["video"],
       "region": {
         "select": "#main",
@@ -193,7 +194,7 @@
             sections.each((_, section) => {
               var anchor = $(section).find(config["next-anchor"]).slice(0, 1);
               var closest = url + "#" + anchor.attr("id");
-              index.setTitle(closest, title + " -- " + anchor.text());
+              index.setTitle(closest, title + " ⇒ " + anchor.text());
               parseDirectives(iface, $(section), getAbs, closest, index, config, flavors, missing);
             });
           } else {
