@@ -122,137 +122,148 @@
       return;
     }
 
-    parseDirectives(iface, {
+    parseDocument(iface, {
       find: function () {
         return jQuery.apply(jQuery, [].slice.call(arguments));
       }
     }, getAbs, url, index, configRoot, [], undefined);
   }
 
-  function parseDirectives (iface, elts, getAbs, url, index, config, flavors, missing) {
-    try {
-      if ("flavors" in config)
-        flavors = config.flavors;
-      if ("missing" in config)
-        missing = config.missing;
-      if ("region" in config) {
-        if (config.region.constructor === Array)
-          config.region.forEach(region => {
-            processRegion(elts, region);
-          })
-        else
-          processRegion(elts, config.region);
-      }
-      var indexMe = {};
-      if ("find" in config) {
-        var found = config.find.reduce((acc, find) => {
-          return acc.add(parseThenElse(elts.find(find.select), find));
-        }, $("create empty selection"));
-      }
-      if ("rest" in config) {
-        return parseThenElse(elts.find(">"), config.rest);
-      }
-
-      function processRegion (elts, config) {
-        if (!("select" in config))
-          return iface.log("expected select in "+JSON.stringify(config));
-        var sections = elts.find(config.select);
-        if ("then" in config) {
-          eval(`sections = sections.${config.then};`);
+  /**
+   * parseDocument is a wrapper around the recursive parseDirectives function.
+   * It captures the title in a closure.
+   */
+  function parseDocument (iface, elts, getAbs, url, index, config, flavors, missing) {
+    var title = elts.find("title").text();
+    index.setTitle(url, title);
+    return parseDirectives(iface, elts, getAbs, url, index, config, flavors, missing);
+    
+    function parseDirectives (iface, elts, getAbs, url, index, config, flavors, missing) {
+      try {
+        if ("flavors" in config)
+          flavors = config.flavors;
+        if ("missing" in config)
+          missing = config.missing;
+        if ("region" in config) {
+          if (config.region.constructor === Array)
+            config.region.forEach(region => {
+              processRegion(elts, region);
+            })
+          else
+            processRegion(elts, config.region);
         }
-        if ("follow" in config) {
-          var az = sections.map((_, section) => {
-            return $(section).find("a");
-          });
-          if ("then" in config.follow) {
-            eval(`az = az.${config.follow.then};`);
+        var indexMe = {};
+        if ("find" in config) {
+          var found = config.find.reduce((acc, find) => {
+            return acc.add(parseThenElse(elts.find(find.select), find));
+          }, $("create empty selection"));
+        }
+        if ("rest" in config) {
+          return parseThenElse(elts.find(">"), config.rest);
+        }
+
+        function processRegion (elts, config) {
+          if (!("select" in config))
+            return iface.log("expected select in "+JSON.stringify(config));
+          var sections = elts.find(config.select);
+          if ("then" in config) {
+            eval(`sections = sections.${config.then};`);
           }
-          iface.log("scraping", az.length, "pages:");
-          az.each((idx, a) => {
-            var href = getAbs($(a).attr("href"));
-            iface.get(
-              href,
-              function (iface2, jQuery2, getAbs2, url2, index2) {
-                parseDirectives(iface2, {
-                  find: function () {
-                    return jQuery2.apply(jQuery2, [].slice.call(arguments));
-                  }
-                }, getAbs2, url2, index2, config.follow, flavors, missing);
-              });
-          });
-        } else if ("next-anchor" in config) {
-          sections.each((_, section) => {
-            var closest = url + "#" + $(section).
-                find(config["next-anchor"]).slice(0, 1).attr("id");
-            parseDirectives(iface, $(section), getAbs, closest, index, config, flavors, missing);
+          if ("follow" in config) {
+            var az = sections.map((_, section) => {
+              return $(section).find("a");
             });
-        } else {
-          sections.each((_, section) => {
-            parseDirectives(iface, $(section), getAbs, url, index, config, flavors, missing);
-          });
-        // } else {
-        //   return index.fail("expected next-anchor or follow in", JSON.stringify(config, null, 2));
+            if ("then" in config.follow) {
+              eval(`az = az.${config.follow.then};`);
+            }
+            iface.log("scraping", az.length, "pages:");
+            az.each((idx, a) => {
+              var href = getAbs($(a).attr("href"));
+              iface.get(
+                href,
+                function (iface2, jQuery2, getAbs2, url2, index2) {
+                  parseDocument(iface2, {
+                    find: function () {
+                      return jQuery2.apply(jQuery2, [].slice.call(arguments));
+                    }
+                  }, getAbs2, url2, index2, config.follow, flavors, missing);
+                });
+            });
+          } else if ("next-anchor" in config) {
+            sections.each((_, section) => {
+              var anchor = $(section).find(config["next-anchor"]).slice(0, 1);
+              var closest = url + "#" + anchor.attr("id");
+              index.setTitle(closest, title + " -- " + anchor.text());
+              parseDirectives(iface, $(section), getAbs, closest, index, config, flavors, missing);
+            });
+          } else {
+            sections.each((_, section) => {
+              parseDirectives(iface, $(section), getAbs, url, index, config, flavors, missing);
+            });
+            // } else {
+            //   return index.fail("expected next-anchor or follow in", JSON.stringify(config, null, 2));
+          }
+          return;
         }
-        return;
-      }
 
-      function parseThenElse (innerElts, config) {
-        if ("then" in config) {
-          eval(`innerElts = innerElts.${config.then};`);
-        }
-        if ("quality" in config) {
-          var vals = innerElts.map((idx, elt) => {
-            return "attribute" in config ?
-              $(elt).attr(config.attribute) :
-              $(elt).text();
-          }).get().filter(val => {
-            return val ? true : false;
-          });
-          // vals will be [] if there were no matches.
-          if (vals.length) {
-            if ("replace" in config) {
+        function parseThenElse (innerElts, config) {
+          if ("then" in config) {
+            eval(`innerElts = innerElts.${config.then};`);
+          }
+          if ("quality" in config) {
+            var vals = innerElts.map((idx, elt) => {
+              return "attribute" in config ?
+                $(elt).attr(config.attribute) :
+                $(elt).text();
+            }).get().filter(val => {
+              return val ? true : false;
+            });
+            // vals will be [] if there were no matches.
+            if (vals.length) {
+              if ("replace" in config) {
+                vals = vals.map(val => {
+                  return config.replace.reduce((acc, pair) => {
+                    var regexp = new RegExp(pair[0], pair[2] || "");
+                    return acc.replace(regexp, pair[1]);
+                  }, val);
+                });
+              }
               vals = vals.map(val => {
-                return config.replace.reduce((acc, pair) => {
-                  var regexp = new RegExp(pair[0], pair[2] || "");
-                  return acc.replace(regexp, pair[1]);
-                }, val);
+                return val.replace(/(\s+)/g, t => {
+                  return t[0];
+                }).toLowerCase();
               });
-            }
-            vals = vals.map(val => {
-              return val.replace(/(\s+)/g, t => {
-                return t[0];
-              }).toLowerCase();
-            });
-            index.set4(url, config.flavors || flavors, config.quality, vals);
-          } else if (missing) {
-            addTruncate($);
-            // console.log($.truncate(elts.find(">"), { length: 50 }));
-            var notIn =
-                (innerElts.length ? innerElts : elts.find(">")).map((i, el) => {
-                  return $.truncate($(el), { length: 50 });
-                }).get().join("\n");
-            var what = innerElts.length ? "indexable content" : "select " + config.select;
-            switch (missing) {
-            case "debugger":
-              console.log(what + " not found in " + notIn);
-              debugger;
-              break;
-            case "log":
-              iface.log(what + " not found in " + notIn);
-              break;
-            case "index":
-              index.fail(what + " not found in ", notIn);
-              break;
-            default:
-              index.fail("unknown missing directive", config.missing);
+              index.set4(url, config.flavors || flavors, config.quality, vals);
+            } else if (missing) {
+              addTruncate($);
+              // console.log($.truncate(elts.find(">"), { length: 50 }));
+              var notIn =
+                  (innerElts.length ? innerElts : elts.find(">")).map((i, el) => {
+                    return $.truncate($(el), { length: 50 });
+                  }).get().join("\n");
+              var what = innerElts.length ? "indexable content" : "select " + config.select;
+              switch (missing) {
+              case "debugger":
+                console.log(what + " not found in " + notIn);
+                debugger;
+                break;
+              case "log":
+                iface.log(what + " not found in " + notIn);
+                break;
+              case "index":
+                index.fail(what + " not found in ", notIn);
+                break;
+              default:
+                index.fail("unknown missing directive", config.missing);
+              }
             }
           }
+          innerElts.remove(); // Remove stuff we've already indexed.
+          return innerElts;
         }
-        innerElts.remove(); // Remove stuff we've already indexed.
-        return innerElts;
+      } catch (e) {
+        return index.fail("error", e.toString());
       }
-    } catch (e) {
-      return index.fail("error", e.toString());
     }
   }
 
