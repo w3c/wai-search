@@ -5,61 +5,8 @@
     <script src="/scripts/jquery/2.1.4/jquery.min.js" type="text/javascript"></script>
     <script src="scroungelib.js" type="text/javascript"></script>
     <script src="scrounge-ui.js" type="text/javascript"></script>
-    <!-- <script type = "text/javascript" language = "javascript"> -->
-    <!-- </script> -->
-    <style type="text/css">
-      #indexButton.idle  { background-color: #bbb; }
-      #indexButton.doing { background-color: #cc0; }
-      #indexButton.done  { background-color: #be0; }
-      #indexButton { width: 5em; }
-      .idle  { background-color: #bbb; }
-      .doing { background-color: #cc0; }
-      .done  { background-color: #be0; }
-      ul.index { padding-left: 1ex; }
-      .index { background-color: #ddd; display: none; }
-      .index div { margin: 0 0 3ex; }
-      h2.title { display: inline; font-size: 1em; }
-      .count { color: blue; }
-      .valuation { display: none; color: green; }
-      .flavors { /* display: none; */ color: teal; }
-      .url { font-size: smaller }
-      .key { font-weight: bold; }
-      li.log, li.fail { list-style-type: none; }
-      .fail { background-color: #fcc; }
-      li > div { display: inline; }
-      div.value { font-family: monospace; }
-      .region { border-left: thick solid gold; }
-      .region:hover {
-        background-color: gold;
-      }
-      .target button {
-          width: 1em;
-          padding: .5em 0;
-          padding-right: .5em;
-      }
-
-      .addTarget, .removeTarget, #flavors button {
-          font-size: 80%;
-          line-height: 1ex;
-          font-family: monospace;
-      }
-      p, ol { margin: 0; }
-      pre.value { display: flex; }
-      blockquote.value {
-        background-color: #fffff0;
-        margin-top: 0; margin-bottom: 0;
-        border: medium solid #eeeee0;
-      }
-      span.skip { background-color: #eeeee0; }
-      .lead, .trail {  }
-      .match { font-weight: bold }
-      #flavors { display: flex; margin-top: 0; }
-      #flavors li {
-        list-style-type: none;
-        padding-right: 2em;
-      }
-      #results li { margin-bottom: 2ex; }
-    </style>
+    <link rel="stylesheet" href="scrounge-ui.css"/>
+    <link rel="stylesheet" href="search-ui.css"/>
   </head>
   <body>
     <p>Target list:</p>
@@ -70,17 +17,17 @@
     <input type="button" id="indexButton" value="Index" disabled="disabled" />
     <input type="button" id="clear" value="clear" disabled="disabled"/>
     </div>
-    <form id="searchForm" style="float:left">
+    <form style="float:left">
       <fieldset>
         <legend>search box</legend>
-        <label for="search">Search: </label>
-        <input id="search" disabled="disabled"/>
+        <label for="search-input">Search: </label>
+        <input id="search-input" disabled="disabled"/>
       </fieldset>
     </form>
-        <hr style="clear:both;"/>
-<ul id="flavors"></ul>
-<ol id="results"></ol>
-<div id="log" class="idle"></div>
+    <hr style="clear:both;"/>
+    <ul id="search-flavors"></ul>
+    <ol id="search-results"></ol>
+    <div id="log" class="idle"></div>
   </body>
 </html>
 

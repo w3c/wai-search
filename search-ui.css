@@ -1,0 +1,23 @@
+#search-flavors { display: flex; margin-top: 0; }
+#search-flavors li {
+    list-style-type: none;
+    padding-right: 2em;
+}
+#search-flavors button {
+    font-size: 80%;
+    line-height: 1ex;
+    font-family: monospace;
+}
+#search-results h2.title { display: inline; font-size: 1em; }
+#search-results .valuation { display: none; color: green; }
+#search-results .flavors { /* display: none; */ color: teal; }
+#search-results .url { font-size: smaller }
+#search-results span.skip { background-color: #eeeee0; }
+#search-results .lead, .trail {  }
+#search-results .match { font-weight: bold }
+#search-results li { margin-bottom: 2ex; }
+#search-results blockquote.value {
+    background-color: #fffff0;
+    margin-top: 0; margin-bottom: 0;
+    border: medium solid #eeeee0;
+}

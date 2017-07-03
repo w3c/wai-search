@@ -122,7 +122,7 @@
         }
       }
     });
-    $("#search").
+    $("#search-input").
       on("blur", performSearch).
       on("keypress", evt => {
         if(evt.keyCode == 13) {
@@ -140,20 +140,20 @@
       }).get();
       window.Scrounger.startCrawl(getInterface(), uiTargetList);
       $("#clear").prop("disabled", false);
-      $("#search").prop("disabled", false);
+      $("#search-input").prop("disabled", false);
     }).prop("disabled", false);
     $("#clear").click(() => {
       $("#log").empty();
       $("#indexButton").attr("class", null).prop("value", "Index");
       $("#clear").prop("disabled", true);
-      $("#search").prop("disabled", true);
+      $("#search-input").prop("disabled", true);
     });
   });
 
   function performSearch (evt) {
     var idx = rootIndex.get();
-    var search = $("#search").val().trim().toLowerCase();
-    $("#results").empty();
+    var search = $("#search-input").val().trim().toLowerCase();
+    $("#search-results").empty();
     if (search.length === 0)
       return false;
 
@@ -191,7 +191,7 @@
       // Sort in at bottom, i.e. append new result.
       return allResults.concat(bestForUrl);
     }, []);
-    $("#flavors").empty().append(
+    $("#search-flavors").empty().append(
       knownFlavors.map(flavor => {
         return $("<li/>").
           append(
@@ -202,14 +202,14 @@
             "<br/>",
             $("<button/>", { text: "only" }).
               on("click", evt => {
-                $("#flavors input").prop('checked', false);
+                $("#search-flavors input").prop('checked', false);
                 $(evt.target).parent().find("input").prop('checked', true);
                 return redraw(evt);
               })
           );
       })
     );
-    $("#results").append(
+    $("#search-results").append(
       list.length > 0 ?
         buildResults(list) :
         $("<span/>").addClass("fail").
@@ -219,14 +219,14 @@
   }
 
   function redraw (evt) {
-    var flavors = $("#flavors input:checked").map((idx, elt) => {
+    var flavors = $("#search-flavors input:checked").map((idx, elt) => {
       return $(elt).val();
     }).get();
     if (flavors.length === 0) {
-      $("#results li").show();
+      $("#search-results li").show();
       return true;
     }
-    $("#results li").each((idx, li) => {
+    $("#search-results li").each((idx, li) => {
       var liFlavors = $(li).attr("data-flavors").split(/,/);
       if (flavors.filter(flavor => {
         return liFlavors.indexOf(flavor) !== -1;
