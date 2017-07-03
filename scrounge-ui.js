@@ -16,6 +16,7 @@
   const DONE = "done";
   const KEY = "key";
   const VALUE = "value";
+  const RENDERED_RESULT = "block";
 
   // ## Mechanics ##
   var Loader = "ajax"; // how to load sub pages [ajax|elt.load]
