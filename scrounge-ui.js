@@ -7,7 +7,10 @@
   // How much to throttle repeated GETs to avoid getting blacklisted on w3.org:
   const DELAY = 0; // Set to 0 to run unthrottled.
   const LOG_TO_CONSOLE = false; // mirror logged message to the console.
-  const MATCHQ = 256; // nth word match is MATCHQ × more important than q.
+
+  // Ranking factors
+  const CLUSTERQ = 16; // flatten 1/x curve
+  const MATCHQ = 16; // nth word match is MATCHQ × more important than q.
 
   // Some display classes which can be set in the .html style:
   const COUNT = "count";
@@ -164,6 +167,7 @@
       }, null);
       if (bestForUrl === null)
         return allResults;
+      bestForUrl.url = url;
 
       // Add any new flavors from this match.
       bestForUrl.flavors.forEach(flavor => {
@@ -316,7 +320,6 @@
 
     // Create a new result.
     return {
-      url: url,
       q: q,
       flavors: flavors,
       text: match,
@@ -443,7 +446,7 @@
     var step = 1 / indexes.length;
     var clusterQ = 0;
     for (var i = 1; i < sorted.length; ++i)
-      clusterQ += 1/(sorted[i].index - sorted[i-1].index);
+      clusterQ += 1/((sorted[i].index - sorted[i-1].index)/CLUSTERQ + 1);
     return (sorted.length - 1) * step + clusterQ * step;
   }
 
